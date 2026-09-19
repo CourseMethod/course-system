@@ -1,0 +1,127 @@
+═══════════════════════════════════════════════════════════════════
+                  COURSE SYSTEM DEPLOYMENT QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════
+
+🔴 STOP: You're deploying to VERCEL - this is WRONG
+────────────────────────────────────────────────────
+
+YOUR SETUP NEEDS:
+  Backend   → RAILWAY (persistent filesystem)
+  Frontend  → VERCEL  (static pages)
+
+VERCEL CANNOT: Keep databases between deploys. Customer data disappears.
+               Vercel wipes filesystem on every deploy.
+
+═══════════════════════════════════════════════════════════════════
+
+⏱️  TOTAL TIME: 30 MINUTES
+
+STEP 1: Create Railway Account (5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. https://railway.app
+  2. Click "Deploy"
+  3. Sign in with GitHub
+  4. Authorize Railway
+
+STEP 2: Push Code to GitHub (5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. cd your-project-folder
+  2. bash push-to-github.sh
+  3. Enter your GitHub repo URL when prompted
+  4. Done!
+
+STEP 3: Create Railway Project (5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Railway → New Project → Deploy from GitHub
+  2. Select your repo
+  3. Click Deploy
+  4. Wait for auto-detection
+
+STEP 4: Configure Railway (5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Settings → Root Directory: backend
+
+  ⚠️  CRITICAL - DO NOT SKIP:
+  Settings → Volumes → Add Volume
+    Mount path: /data
+
+  Variables → Add:
+    DATABASE_PATH=/data/course-printer.db
+    NODE_ENV=production
+    PUBLIC_URL=https://YOUR_APP.up.railway.app
+    CORS_ORIGINS=https://YOUR_APP.up.railway.app
+    (PLUS all lines from backend/.env.local)
+
+STEP 5: Setup Stripe Webhook (3 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Stripe Dashboard → Webhooks → Add endpoint
+  2. URL: https://YOUR_APP.up.railway.app/api/webhook
+  3. Events: payment_intent.succeeded, charge.refunded
+  4. Copy webhook signing secret
+  5. Railway Variables → STRIPE_WEBHOOK_SECRET = (paste secret)
+
+STEP 6: Update Frontend (5 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Open: web/index.html
+  2. Find: var API = '/api';
+  3. Replace with: var API = 'https://YOUR_APP.up.railway.app/api';
+  4. Save & push:
+       git add web/
+       git commit -m "Update API endpoint"
+       git push
+
+STEP 7: Test (2 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Test endpoint:
+     https://YOUR_APP.up.railway.app/api/health/ready
+     Should show: "status": "ready"
+
+  2. Make a test purchase:
+     Card: 4242 4242 4242 4242
+     Exp: 12/25
+     CVC: anything
+     Check for email delivery
+
+═══════════════════════════════════════════════════════════════════
+
+PLACEHOLDERS TO REPLACE:
+
+YOUR_APP             → Your railway subdomain (e.g., course-method)
+YOUR_USERNAME        → Your GitHub username
+YOUR_REPO            → Your repository name
+your-email@gmail.com → Your actual Gmail address
+
+═══════════════════════════════════════════════════════════════════
+
+🆘 TROUBLESHOOTING QUICK LINKS:
+
+Health check fails?
+  → Railway Dashboard → Logs → Check for errors
+  → Likely: Missing .env variable
+
+Stripe webhook not firing?
+  → Check logs for 400/500 errors
+  → Verify webhook URL is EXACTLY correct
+  → Try re-adding the endpoint in Stripe
+
+Download link doesn't work?
+  → Check: /api/health/ready shows "deliverable": true
+  → If false: Vault didn't build → check logs
+
+CORS errors in browser?
+  → Set CORS_ORIGINS to your Vercel domain
+  → Redeploy Railway
+
+═══════════════════════════════════════════════════════════════════
+
+📋 FILES IN THIS FOLDER:
+
+✅ DEPLOY_CHECKLIST.md       ← Read this first (detailed guide)
+✅ DEPLOYMENT_SUMMARY.md     ← Why Vercel is wrong, how to fix
+✅ push-to-github.sh         ← Automates: git add, commit, push
+✅ QUICK_REFERENCE.txt       ← This file
+✅ package.json              ← Updated for your disk (postinstall added)
+
+═══════════════════════════════════════════════════════════════════
+
+You're 30 minutes away from live. Let's go! 🚀

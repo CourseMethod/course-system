@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Course Printer</title>
+<meta name="robots" content="noindex, nofollow">
+
+<!--
+  ADMIN DASHBOARD
+
+  Every request from this page carries the admin bearer token. The token is held
+  in sessionStorage, which means it is gone when the tab closes — deliberately.
+  A token in localStorage survives on a shared or stolen laptop.
+
+  SECURITY REALITY CHECK: this page is only as private as the URL it sits on.
+  Anyone who reaches /admin.html sees a login prompt, not your data, and the
+  token is the actual control. But do not treat "nobody knows the URL" as
+  security. If you want belt and braces, put this page behind your host's basic
+  auth as well, or serve it only on a private network. See docs/Security-
+  Hardening.md, "Protecting the dashboard".
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ── Page tokens ───────────────────────────────────────────────────────── */
+:root {
+  --plane:#f9f9f7; --surface:#fcfcfb; --surface-2:#f2f2ef;
+  --ink:#0b0b0b; --text-2:#52514e; --text-3:#7a7974;
+  --line:#e4e4e0; --line-2:#d2d2cc;
+  --accent:#2a78d6; --accent-ink:#1c5cab;
+  --good:#1f6b47; --warn:#8a6d1f; --bad:#b3261e;
+  --shadow:0 1px 2px rgba(0,0,0,.05), 0 4px 12px rgba(0,0,0,.05);
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  /* Chart roles — single-series magnitude uses one hue; the funnel uses an
+     ordinal ramp of that same hue. Both validated against these surfaces. */
+  --series-1:#2a78d6;
+  --ramp-1:#86b6ef; --ramp-2:#5598e7; --ramp-3:#2a78d6; --ramp-4:#1c5cab;
+  --grid:#e8e8e4; --axis-ink:#7a7974;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --plane:#0d0d0d; --surface:#191820; --surface-2:#201f28;
+    --ink:#f6f5f1; --text-2:#c3c2b7; --text-3:#8e8d85;
+    --line:#2b2a34; --line-2:#3a3945;
+    --accent:#3987e5; --accent-ink:#86b6ef;
+    --good:#6ee7b7; --warn:#d8b75f; --bad:#f2837c;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.35);
+    --series-1:#3987e5;
+    --ramp-1:#1c5cab; --ramp-2:#2a78d6; --ramp-3:#5598e7; --ramp-4:#86b6ef;
+    --grid:#26262f; --axis-ink:#8e8d85;
+  }
+}
+:root[data-theme="dark"] {
+  --plane:#0d0d0d; --surface:#191820; --surface-2:#201f28;
+  --ink:#f6f5f1; --text-2:#c3c2b7; --text-3:#8e8d85;
+  --line:#2b2a34; --line-2:#3a3945;
+  --accent:#3987e5; --accent-ink:#86b6ef;
+  --good:#6ee7b7; --warn:#d8b75f; --bad:#f2837c;
+  --series-1:#3987e5;
+  --ramp-1:#1c5cab; --ramp-2:#2a78d6; --ramp-3:#5598e7; --ramp-4:#86b6ef;
+  --grid:#26262f; --axis-ink:#8e8d85;
+}
+
+*,*::before,*::after { box-sizing:border-box; }
+body {
+  margin:0; background:var(--plane); color:var(--text-2);
+  font-family:var(--sans); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3 { color:var(--ink); margin:0; line-height:1.2; letter-spacing:-.02em; }
+h1 { font-size:1.3rem; font-weight:650; }
+h2 { font-size:1.05rem; font-weight:650; }
+h3 { font-size:.9rem; font-weight:600; }
+a { color:var(--accent); }
+
+.wrap { max-width:1180px; margin:0 auto; padding:0 16px; }
+
+/* ── Top bar ───────────────────────────────────────────────────────────── */
+.topbar {
+  background:var(--surface); border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:40;
+}
+.topbar-inner { display:flex; align-items:center; justify-content:space-between; height:56px; gap:1rem; }
+.brand { font-weight:650; color:var(--ink); font-size:.98rem; }
+.topbar-actions { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+
+/* ── Controls ──────────────────────────────────────────────────────────── */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+  padding:.45rem .85rem; border-radius:7px; border:1px solid var(--line-2);
+  background:var(--surface); color:var(--ink);
+  font-family:var(--sans); font-size:.85rem; font-weight:550; cursor:pointer;
+  text-decoration:none; transition:background .12s, border-color .12s;
+}
+.btn:hover { background:var(--surface-2); border-color:var(--text-3); }
+.btn-primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .btn-primary{ color:#0d0d0d; } }
+:root[data-theme="dark"] .btn-primary { color:#0d0d0d; }
+.btn-primary:hover { background:var(--accent-ink); border-color:var(--accent-ink); }
+.btn-danger { color:var(--bad); border-color:color-mix(in srgb,var(--bad) 40%,transparent); }
+.btn-xs { padding:.25rem .55rem; font-size:.78rem; border-radius:6px; }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+
+input, select, textarea {
+  padding:.45rem .7rem; border:1px solid var(--line-2); border-radius:7px;
+  font-family:var(--sans); font-size:.88rem; background:var(--surface); color:var(--ink);
+}
+
+/* ── Layout ────────────────────────────────────────────────────────────── */
+main { padding:1.5rem 0 4rem; }
+.section { margin-bottom:2rem; }
+.section-head {
+  display:flex; align-items:baseline; justify-content:space-between;
+  gap:1rem; margin-bottom:.9rem; flex-wrap:wrap;
+}
+.section-sub { font-size:.83rem; color:var(--text-3); }
+
+.card {
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:12px; padding:1.1rem 1.2rem; box-shadow:var(--shadow);
+}
+
+/* ── Stat tiles — the hero numbers ─────────────────────────────────────── */
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:.8rem; }
+.tile { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; }
+.tile-label { font-size:.76rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-3); }
+.tile-value {
+  font-size:1.85rem; font-weight:650; color:var(--ink);
+  letter-spacing:-.03em; line-height:1.15; margin-top:.3rem;
+  font-variant-numeric:tabular-nums;
+}
+.tile-note { font-size:.8rem; color:var(--text-3); margin-top:.15rem; }
+.tile-note.good { color:var(--good); }
+.tile-note.warn { color:var(--warn); }
+.tile-note.bad  { color:var(--bad); }
+
+/* ── Charts ────────────────────────────────────────────────────────────── */
+.chart-row { display:grid; grid-template-columns:1.55fr 1fr; gap:.8rem; }
+@media (max-width:860px){ .chart-row { grid-template-columns:1fr; } }
+.chart-title { font-size:.92rem; font-weight:600; color:var(--ink); margin-bottom:.15rem; }
+.chart-caption { font-size:.8rem; color:var(--text-3); margin-bottom:1rem; }
+.chart-holder { position:relative; }
+svg { display:block; width:100%; overflow:visible; }
+.grid-line { stroke:var(--grid); stroke-width:1; }
+.axis-text { fill:var(--axis-ink); font-size:10.5px; font-family:var(--sans); }
+.bar { fill:var(--series-1); transition:opacity .12s; }
+.bar-hit { fill:transparent; cursor:pointer; }
+.bar-hit:hover + .bar, .bar.hot { opacity:.72; }
+
+.tooltip {
+  position:absolute; pointer-events:none; opacity:0; transition:opacity .1s;
+  background:var(--ink); color:var(--plane); padding:.45rem .65rem;
+  border-radius:7px; font-size:.79rem; line-height:1.4; white-space:nowrap;
+  box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:20;
+}
+.tooltip.on { opacity:1; }
+.tooltip b { color:var(--plane); font-weight:650; }
+
+/* Funnel */
+.funnel { display:flex; flex-direction:column; gap:.4rem; }
+.funnel-step { display:grid; grid-template-columns:1fr auto; gap:.6rem; align-items:center; }
+.funnel-bar-track { position:relative; height:30px; background:var(--surface-2); border-radius:5px; overflow:hidden; }
+.funnel-bar { height:100%; border-radius:4px 5px 5px 4px; }
+.funnel-label {
+  position:absolute; left:.6rem; top:50%; transform:translateY(-50%);
+  font-size:.79rem; font-weight:550; color:var(--ink); white-space:nowrap;
+}
+.funnel-val { font-size:.83rem; font-weight:650; color:var(--ink); font-variant-numeric:tabular-nums; min-width:5.5rem; text-align:right; }
+.funnel-rate { font-size:.74rem; color:var(--text-3); font-weight:400; }
+
+/* ── Tables ────────────────────────────────────────────────────────────── */
+.table-holder { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; font-size:.86rem; min-width:620px; }
+th, td { padding:.6rem .7rem; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+th { font-size:.74rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-3); white-space:nowrap; }
+td.num { text-align:right; font-variant-numeric:tabular-nums; }
+tbody tr:hover { background:var(--surface-2); }
+.mono { font-family:var(--mono); font-size:.8rem; }
+
+.pill {
+  display:inline-block; padding:.12rem .5rem; border-radius:99px;
+  font-size:.73rem; font-weight:600; white-space:nowrap;
+}
+.pill-good { background:color-mix(in srgb,var(--good) 15%,transparent); color:var(--good); }
+.pill-warn { background:color-mix(in srgb,var(--warn) 18%,transparent); color:var(--warn); }
+.pill-bad  { background:color-mix(in srgb,var(--bad) 15%,transparent); color:var(--bad); }
+.pill-mute { background:var(--surface-2); color:var(--text-3); }
+
+.empty { padding:2rem 1rem; text-align:center; color:var(--text-3); font-size:.88rem; }
+
+/* ── Login ─────────────────────────────────────────────────────────────── */
+.login-screen {
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
+}
+.login-card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:2rem; max-width:400px; width:100%; box-shadow:var(--shadow); }
+.login-card h1 { margin-bottom:.4rem; }
+.login-card p { font-size:.88rem; color:var(--text-3); margin:0 0 1.3rem; }
+.login-card input { width:100%; margin-bottom:.8rem; font-family:var(--mono); font-size:.85rem; }
+
+.banner { padding:.7rem 1rem; border-radius:9px; font-size:.86rem; margin-bottom:1rem; display:none; }
+.banner.on { display:block; }
+.banner-bad { background:color-mix(in srgb,var(--bad) 12%,transparent); color:var(--bad); }
+.banner-warn { background:color-mix(in srgb,var(--warn) 15%,transparent); color:var(--warn); }
+
+.hidden { display:none !important; }
+.tabs { display:flex; gap:.3rem; border-bottom:1px solid var(--line); margin-bottom:1rem; flex-wrap:wrap; }
+.tab {
+  padding:.5rem .9rem; border:none; background:none; cursor:pointer;
+  font-family:var(--sans); font-size:.88rem; font-weight:550; color:var(--text-3);
+  border-bottom:2px solid transparent; margin-bottom:-1px;
+}
+.tab.active { color:var(--ink); border-bottom-color:var(--accent); }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+</style>
+</head>
+<body>
+
+<!-- ── Login ─────────────────────────────────────────────────────────────── -->
+<div class="login-screen" id="loginScreen">
+  <form class="login-card" id="loginForm">
+    <h1>Dashboard</h1>
+    <p>Paste your admin token. It is the <code>ADMIN_TOKEN</code> value from your <code>.env</code> file.</p>
+    <label for="tokenInput" class="sr-only">Admin token</label>
+    <input type="password" id="tokenInput" placeholder="Admin token" autocomplete="off" required>
+    <button type="submit" class="btn btn-primary" style="width:100%">Open dashboard</button>
+    <div class="banner banner-bad" id="loginError" style="margin-top:1rem; margin-bottom:0;"></div>
+    <p style="margin-top:1.3rem; margin-bottom:0; font-size:.8rem;">
+      The token is kept in this tab only and cleared when you close it.
+    </p>
+  </form>
+</div>
+
+<!-- ── Dashboard ─────────────────────────────────────────────────────────── -->
+<div id="app" class="hidden">
+
+  <div class="topbar">
+    <div class="wrap topbar-inner">
+      <span class="brand">Course Printer</span>
+      <div class="topbar-actions">
+        <span class="section-sub" id="lastUpdated"></span>
+        <button class="btn btn-xs" id="refreshBtn">Refresh</button>
+        <button class="btn btn-xs" id="exportBtn">Export CSV</button>
+        <button class="btn btn-xs" id="logoutBtn">Lock</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="wrap">
+
+    <div class="banner banner-bad" id="alertBanner"></div>
+
+    <!-- Headline numbers -->
+    <section class="section">
+      <div class="tiles" id="tiles"></div>
+    </section>
+
+    <!-- Charts -->
+    <section class="section">
+      <div class="chart-row">
+        <div class="card">
+          <div class="chart-title">Revenue, last 30 days</div>
+          <div class="chart-caption">Net of refunds. Hover a bar for the day's detail.</div>
+          <div class="chart-holder">
+            <svg id="revenueChart" role="img" aria-labelledby="revChartTitle"></svg>
+            <div class="tooltip" id="revenueTip"></div>
+            <div id="revenueEmpty" class="empty hidden">No sales in the last 30 days yet.</div>
+          </div>
+          <span id="revChartTitle" class="sr-only">Bar chart of daily net revenue over the last thirty days.</span>
+          <details style="margin-top:.9rem;">
+            <summary style="font-size:.8rem; color:var(--text-3); cursor:pointer;">View as table</summary>
+            <div class="table-holder" style="margin-top:.6rem;">
+              <table id="revenueTable" style="min-width:auto;"></table>
+            </div>
+          </details>
+        </div>
+
+        <div class="card">
+          <div class="chart-title">Conversion funnel, 30 days</div>
+          <div class="chart-caption">Distinct visitors at each step.</div>
+          <div class="funnel" id="funnel"></div>
+          <p class="section-sub" id="funnelNote" style="margin-top:1rem;"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <section class="section">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="customers" role="tab">Customers</button>
+        <button class="tab" data-tab="tickets" role="tab">Support</button>
+        <button class="tab" data-tab="testimonials" role="tab">Testimonials</button>
+        <button class="tab" data-tab="sources" role="tab">Traffic sources</button>
+        <button class="tab" data-tab="email" role="tab">Email</button>
+        <button class="tab" data-tab="failures" role="tab">Failures</button>
+      </div>
+
+      <div class="card">
+        <!-- Customers -->
+        <div class="tab-panel" data-panel="customers">
+          <div class="section-head">
+            <h2>Customers</h2>
+            <div style="display:flex; gap:.4rem; flex-wrap:wrap;">
+              <label class="sr-only" for="customerSearch">Search by email</label>
+              <input type="search" id="customerSearch" placeholder="Search email…">
+              <label class="sr-only" for="statusFilter">Filter by status</label>
+              <select id="statusFilter">
+                <option value="">All statuses</option>
+                <option value="paid">Paid</option>
+                <option value="refunded">Refunded</option>
+                <option value="disputed">Disputed</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-holder"><table id="customersTable"></table></div>
+        </div>
+
+        <!-- Tickets -->
+        <div class="tab-panel hidden" data-panel="tickets">
+          <div class="section-head"><h2>Support &amp; refund requests</h2></div>
+          <div class="table-holder"><table id="ticketsTable"></table></div>
+        </div>
+
+        <!-- Testimonials -->
+        <div class="tab-panel hidden" data-panel="testimonials">
+          <div class="section-head">
+            <h2>Testimonial review</h2>
+            <span class="section-sub">Nothing appears on your sales page until you approve it here.</span>
+          </div>
+          <div class="banner banner-warn on" style="margin-bottom:1rem;">
+            <strong>Before approving anything:</strong> confirm the exact wording with the customer,
+            and if they quoted numbers, ask for a screenshot. Publishing a testimonial you invented,
+            or one you do not have written permission to use, violates 16 CFR Part 465 — and a
+            reader who suspects it costs you more than the testimonial gains.
+          </div>
+          <div class="table-holder"><table id="testimonialsTable"></table></div>
+        </div>
+
+        <!-- Sources -->
+        <div class="tab-panel hidden" data-panel="sources">
+          <div class="section-head">
+            <h2>Where buyers came from</h2>
+            <span class="section-sub">From the UTM tags on the link they arrived through.</span>
+          </div>
+          <div class="table-holder"><table id="sourcesTable"></table></div>
+        </div>
+
+        <!-- Email -->
+        <div class="tab-panel hidden" data-panel="email">
+          <div class="section-head">
+            <h2>Email performance</h2>
+            <span class="section-sub">Open rates are unreliable — see the note below.</span>
+          </div>
+          <div class="table-holder"><table id="emailTable"></table></div>
+          <p class="section-sub" style="margin-top:1rem; max-width:62ch;">
+            Apple Mail Privacy Protection and most corporate gateways pre-fetch images, which
+            registers an open nobody performed. Depending on your audience, 20–60% of recorded opens
+            may be machines. Treat open rate as a relative trend between campaigns, never as an
+            absolute. Click rate is far more trustworthy.
+          </p>
+        </div>
+
+        <!-- Failures -->
+        <div class="tab-panel hidden" data-panel="failures">
+          <div class="section-head">
+            <h2>Things that failed</h2>
+            <span class="section-sub">Check here first when a customer reports a problem.</span>
+          </div>
+          <h3 style="margin:1rem 0 .5rem;">Failed webhooks</h3>
+          <div class="table-holder"><table id="webhookFailTable"></table></div>
+          <h3 style="margin:1.8rem 0 .5rem;">Failed emails</h3>
+          <div class="table-holder"><table id="emailFailTable"></table></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var API = '/api/admin';
+  var token = null;
+
+  /* ── Auth ──────────────────────────────────────────────────────────── */
+  try { token = sessionStorage.getItem('cp_admin_token'); } catch (e) { token = null; }
+
+  function api(path, options) {
+    options = options || {};
+    return fetch(API + path, {
+      method: options.method || 'GET',
+      headers: Object.assign(
+        { 'Authorization': 'Bearer ' + token },
+        options.body ? { 'Content-Type': 'application/json' } : {}
+      ),
+      body: options.body ? JSON.stringify(options.body) : undefined
+    }).then(function (response) {
+      if (response.status === 401) {
+        lock('That token was rejected.');
+        throw new Error('unauthorized');
+      }
+      return response.json().then(function (body) {
+        if (!response.ok) throw new Error((body.error && body.error.message) || 'Request failed');
+        return body;
+      });
+    });
+  }
+
+  function lock(message) {
+    try { sessionStorage.removeItem('cp_admin_token'); } catch (e) {}
+    token = null;
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('loginScreen').style.display = 'flex';
+    if (message) {
+      var banner = document.getElementById('loginError');
+      banner.textContent = message;
+      banner.classList.add('on');
+    }
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var value = document.getElementById('tokenInput').value.trim();
+    if (!value) return;
+    token = value;
+    try { sessionStorage.setItem('cp_admin_token', value); } catch (e) {}
+    document.getElementById('loginError').classList.remove('on');
+    boot();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function () { lock(null); });
+  document.getElementById('refreshBtn').addEventListener('click', function () { loadAll(); });
+
+  document.getElementById('exportBtn').addEventListener('click', function () {
+    // A plain <a download> cannot set an Authorization header, so the token
+    // goes in the query string for this one request. The server accepts it
+    // there and never logs query strings.
+    window.location.href = API + '/export/customers.csv?token=' + encodeURIComponent(token);
+  });
+
+  /* ── Formatting ────────────────────────────────────────────────────── */
+  function esc(value) {
+    return String(value === null || value === undefined ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function pct(value) { return (value * 100).toFixed(1) + '%'; }
+  function money(cents) { return '$' + (cents / 100).toFixed(2); }
+  function shortDate(iso) {
+    var date = new Date(iso);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+  function dateTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  /* ── Stat tiles ────────────────────────────────────────────────────── */
+  function renderTiles(data) {
+    var refundRate = data.customers.refundRate;
+    var refundTone = refundRate > 0.10 ? 'bad' : refundRate > 0.05 ? 'warn' : 'good';
+
+    var disputeCount = data.customers.disputes;
+    var disputeTone = disputeCount > 0 ? 'bad' : 'good';
+
+    var tiles = [
+      { label: 'Net revenue', value: data.revenue.netFormatted, note: 'All time, after refunds' },
+      { label: 'Last 30 days', value: data.revenue.last30Days.revenueFormatted, note: data.revenue.last30Days.sales + ' sales' },
+      { label: 'Last 7 days', value: data.revenue.last7Days.revenueFormatted, note: data.revenue.last7Days.sales + ' sales' },
+      { label: 'Customers', value: String(data.customers.paid), note: data.customers.byTier.method + ' Method · ' + data.customers.byTier.engine + ' Engine' },
+      { label: 'Average order', value: data.revenue.averageOrderFormatted, note: '' },
+      {
+        label: 'Conversion', value: pct(data.funnel.overall_conversion_rate),
+        note: 'Visitors who bought', tone: data.funnel.overall_conversion_rate >= 0.01 ? 'good' : ''
+      },
+      {
+        label: 'Refund rate', value: pct(refundRate),
+        note: data.customers.refunds + ' refunded', tone: refundTone
+      },
+      {
+        label: 'Disputes', value: String(disputeCount),
+        note: disputeCount > 0 ? 'Respond in Stripe now' : 'None', tone: disputeTone
+      }
+    ];
+
+    document.getElementById('tiles').innerHTML = tiles.map(function (tile) {
+      return '<div class="tile">' +
+        '<div class="tile-label">' + esc(tile.label) + '</div>' +
+        '<div class="tile-value">' + esc(tile.value) + '</div>' +
+        (tile.note ? '<div class="tile-note ' + (tile.tone || '') + '">' + esc(tile.note) + '</div>' : '') +
+        '</div>';
+    }).join('');
+  }
+
+  /* ── Revenue bar chart ──────────────────────────────────────────────
+     Single series, so no legend — the title names it. Bars are thin with
+     4px rounded tops anchored to the baseline, separated by a 2px gap, on a
+     recessive grid. Hover is served by invisible full-height hit targets so
+     the target is much larger than the mark itself. */
+  function renderRevenueChart(daily) {
+    var svg = document.getElementById('revenueChart');
+    var empty = document.getElementById('revenueEmpty');
+
+    if (!daily || daily.length === 0) {
+      svg.innerHTML = '';
+      svg.style.display = 'none';
+      empty.classList.remove('hidden');
+      document.getElementById('revenueTable').innerHTML = '';
+      return;
+    }
+    svg.style.display = 'block';
+    empty.classList.add('hidden');
+
+    var W = 640, H = 200;
+    var M = { top: 12, right: 8, bottom: 26, left: 44 };
+    var plotW = W - M.left - M.right;
+    var plotH = H - M.top - M.bottom;
+
+    var max = Math.max.apply(null, daily.map(function (d) { return d.revenue_cents; }));
+    // Round the axis top to a clean value so gridline labels are readable.
+    var axisTop = Math.max(1000, Math.ceil(max / 1000) * 1000);
+
+    var slot = plotW / daily.length;
+    var GAP = 2;
+    var barW = Math.max(3, Math.min(26, slot - GAP));
+
+    // Build the inner markup only — the <svg> element itself is reused across
+    // refreshes so its id survives. Replacing it with outerHTML would drop the
+    // id and make the second render fail.
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    var parts = [];
+
+    // Gridlines + y labels
+    for (var i = 0; i <= 3; i += 1) {
+      var value = (axisTop / 3) * i;
+      var y = M.top + plotH - (value / axisTop) * plotH;
+      parts.push('<line class="grid-line" x1="' + M.left + '" y1="' + y.toFixed(1) +
+        '" x2="' + (W - M.right) + '" y2="' + y.toFixed(1) + '"/>');
+      parts.push('<text class="axis-text" x="' + (M.left - 7) + '" y="' + (y + 3.5).toFixed(1) +
+        '" text-anchor="end">$' + Math.round(value / 100) + '</text>');
+    }
+
+    // Bars
+    daily.forEach(function (day, index) {
+      var x = M.left + index * slot + (slot - barW) / 2;
+      var barH = axisTop > 0 ? (day.revenue_cents / axisTop) * plotH : 0;
+      var y = M.top + plotH - barH;
+      var radius = Math.min(4, barW / 2, barH);
+
+      // Full-height transparent hit target, drawn first so the bar sits above.
+      parts.push('<rect class="bar-hit" x="' + (M.left + index * slot).toFixed(1) + '" y="' + M.top +
+        '" width="' + slot.toFixed(1) + '" height="' + plotH + '"' +
+        ' data-day="' + esc(day.day) + '" data-sales="' + day.sales +
+        '" data-rev="' + day.revenue_cents + '"></rect>');
+
+      if (barH > 0.5) {
+        // Rounded top only — the data end. The baseline end stays square.
+        parts.push('<path class="bar" d="' +
+          'M' + x.toFixed(1) + ',' + (M.top + plotH).toFixed(1) +
+          ' L' + x.toFixed(1) + ',' + (y + radius).toFixed(1) +
+          ' Q' + x.toFixed(1) + ',' + y.toFixed(1) + ' ' + (x + radius).toFixed(1) + ',' + y.toFixed(1) +
+          ' L' + (x + barW - radius).toFixed(1) + ',' + y.toFixed(1) +
+          ' Q' + (x + barW).toFixed(1) + ',' + y.toFixed(1) + ' ' + (x + barW).toFixed(1) + ',' + (y + radius).toFixed(1) +
+          ' L' + (x + barW).toFixed(1) + ',' + (M.top + plotH).toFixed(1) + ' Z"></path>');
+      }
+    });
+
+    // X labels — first, middle and last only, to avoid collisions.
+    [0, Math.floor(daily.length / 2), daily.length - 1].forEach(function (index, position) {
+      if (index < 0 || index >= daily.length) return;
+      if (position === 1 && daily.length < 5) return;
+      var x = M.left + index * slot + slot / 2;
+      var anchor = position === 0 ? 'start' : position === 2 ? 'end' : 'middle';
+      parts.push('<text class="axis-text" x="' + x.toFixed(1) + '" y="' + (H - 8) +
+        '" text-anchor="' + anchor + '">' + esc(shortDate(daily[index].day)) + '</text>');
+    });
+
+    svg.innerHTML = parts.join('');
+
+    var tip = document.getElementById('revenueTip');
+    var holder = tip.parentElement;
+
+    svg.querySelectorAll('.bar-hit').forEach(function (hit) {
+      hit.addEventListener('mouseenter', function (event) {
+        var rect = holder.getBoundingClientRect();
+        var hitRect = hit.getBoundingClientRect();
+        tip.innerHTML = '<b>' + esc(shortDate(hit.dataset.day)) + '</b><br>' +
+          money(Number(hit.dataset.rev)) + ' · ' + hit.dataset.sales +
+          ' sale' + (Number(hit.dataset.sales) === 1 ? '' : 's');
+        tip.classList.add('on');
+        var left = hitRect.left - rect.left + hitRect.width / 2;
+        tip.style.left = Math.max(4, Math.min(left - tip.offsetWidth / 2, rect.width - tip.offsetWidth - 4)) + 'px';
+        tip.style.top = '4px';
+      });
+      hit.addEventListener('mouseleave', function () { tip.classList.remove('on'); });
+    });
+
+    // Table view — the accessible equivalent of the chart.
+    document.getElementById('revenueTable').innerHTML =
+      '<thead><tr><th>Day</th><th class="num">Sales</th><th class="num">Revenue</th></tr></thead><tbody>' +
+      daily.map(function (day) {
+        return '<tr><td>' + esc(shortDate(day.day)) + '</td>' +
+          '<td class="num">' + day.sales + '</td>' +
+          '<td class="num">' + money(day.revenue_cents) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  /* ── Funnel ─────────────────────────────────────────────────────────
+     An ordinal ramp of one hue, light to dark, with every stage directly
+     labelled — so identity never depends on colour alone. */
+  function renderFunnel(funnel) {
+    var ramp = ['var(--ramp-1)', 'var(--ramp-2)', 'var(--ramp-3)', 'var(--ramp-4)'];
+    var top = funnel.steps[0].count || 1;
+
+    document.getElementById('funnel').innerHTML = funnel.steps.map(function (step, index) {
+      var width = Math.max(2, (step.count / top) * 100);
+      return '<div class="funnel-step">' +
+        '<div class="funnel-bar-track">' +
+          '<div class="funnel-bar" style="width:' + width.toFixed(1) + '%; background:' + ramp[index] + '"></div>' +
+          '<span class="funnel-label">' + esc(step.step) + '</span>' +
+        '</div>' +
+        '<div class="funnel-val">' + step.count.toLocaleString() +
+          (index > 0 ? '<div class="funnel-rate">' + pct(step.conversion_from_previous) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var note = document.getElementById('funnelNote');
+    if (funnel.steps[0].count === 0) {
+      note.textContent = 'No visitor data yet. Numbers appear once people start arriving at your page.';
+    } else {
+      note.textContent = 'Checkout abandonment: ' + pct(funnel.checkout_abandonment_rate) +
+        ' of people who started checkout did not finish.';
+    }
+  }
+
+  /* ── Tables ────────────────────────────────────────────────────────── */
+  function statusPill(status) {
+    var map = { paid: 'pill-good', refunded: 'pill-mute', disputed: 'pill-bad' };
+    return '<span class="pill ' + (map[status] || 'pill-mute') + '">' + esc(status) + '</span>';
+  }
+
+  function renderCustomers(result) {
+    var table = document.getElementById('customersTable');
+    if (!result.customers.length) {
+      table.innerHTML = '<tbody><tr><td class="empty">No customers yet.</td></tr></tbody>';
+      return;
+    }
+    table.innerHTML =
+      '<thead><tr><th>Email</th><th>Tier</th><th class="num">Paid</th><th>Status</th>' +
+      '<th class="num">Downloads</th><th>Source</th><th>When</th><th></th></tr></thead><tbody>' +
+      result.customers.map(function (customer) {
+        return '<tr>' +
+          '<td>' + esc(customer.email) + '</td>' +
+          '<td>' + esc(customer.tier) + '</td>' +
+          '<td class="num">' + esc(customer.amountFormatted) + '</td>' +
+          '<td>' + statusPill(customer.status) + '</td>' +
+          '<td class="num">' + customer.download_count + '</td>' +
+          '<td>' + esc(customer.utm_source || 'direct') + '</td>' +
+          '<td>' + esc(dateTime(customer.created_at)) + '</td>' +
+          '<td style="white-space:nowrap">' +
+            '<button class="btn btn-xs" data-resend="' + esc(customer.id) + '">Resend</button> ' +
+            (customer.status === 'paid'
+              ? '<button class="btn btn-xs btn-danger" data-refund="' + esc(customer.id) + '">Refund</button>'
+              : '') +
+          '</td></tr>';
+      }).join('') + '</tbody>';
+
+    table.querySelectorAll('[data-resend]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        button.disabled = true; button.textContent = '…';
+        api('/customers/' + button.dataset.resend + '/resend', { method: 'POST' })
+          .then(function (result) {
+            button.textContent = result.ok ? 'Sent' : 'Failed';
+            if (!result.ok) window.prompt('Email failed to send. Copy this link and send it manually:', result.downloadUrl);
+          })
+          .catch(function (error) { button.disabled = false; button.textContent = 'Resend'; alert(error.message); });
+      });
+    });
+
+    table.querySelectorAll('[data-refund]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        if (!window.confirm('Refund this customer? Their download access is revoked and they get a confirmation email.')) return;
+        button.disabled = true; button.textContent = '…';
+        api('/customers/' + button.dataset.refund + '/refund', { method: 'POST' })
+          .then(function () { loadAll(); })
+          .catch(function (error) { button.disabled = false; button.textContent = 'Refund'; alert(error.message); });
+      });
+    });
+  }
+
+  function renderTickets(result) {
+    var table = document.getElementById('ticketsTable');
+    if (!result.tickets.length) {
+      table.innerHTML = '<tbody><tr><td class="empty">No support requests. Nice.</td></tr></tbody>';
+      return;
+    }
+    table.innerHTML =
+      '<thead><tr><th>Ref</th><th>Kind</th><th>From</th><th>Subject</th><th>Status</th><th>When</th><th></th></tr></thead><tbody>' +
+      result.tickets.map(function (ticket) {
+        var tone = ticket.kind === 'refund' ? 'pill-bad' : 'pill-mute';
+        return '<tr>' +
+          '<td class="mono">' + esc(ticket.reference) + '</td>' +
+          '<td><span class="pill ' + tone + '">' + esc(ticket.kind) + '</span></td>' +
+          '<td>' + esc(ticket.email) + '</td>' +
+          '<td>' + esc(ticket.subject) + '<div class="section-sub" style="max-width:40ch">' +
+            esc(String(ticket.message).slice(0, 140)) + '</div></td>' +
+          '<td>' + esc(ticket.status) + '</td>' +
+          '<td>' + esc(dateTime(ticket.created_at)) + '</td>' +
+          '<td>' + (ticket.status === 'open'
+            ? '<button class="btn btn-xs" data-resolve="' + esc(ticket.id) + '">Mark resolved</button>' : '') +
+          '</td></tr>';
+      }).join('') + '</tbody>';
+
+    table.querySelectorAll('[data-resolve]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        api('/tickets/' + button.dataset.resolve, { method: 'PATCH', body: { status: 'resolved' } })
+          .then(function () { loadTickets(); })
+          .catch(function (error) { alert(error.message); });
+      });
+    });
+  }
+
+  function renderTestimonials(result) {
+    var table = document.getElementById('testimonialsTable');
+    if (!result.testimonials.length) {
+      table.innerHTML = '<tbody><tr><td class="empty">' +
+        'No submissions yet. The system emails customers asking for feedback ' +
+        'automatically — real ones will land here.</td></tr></tbody>';
+      return;
+    }
+    table.innerHTML =
+      '<thead><tr><th>Name</th><th>What they said</th><th>Claimed result</th>' +
+      '<th>Consent</th><th>Verified</th><th>Live</th><th></th></tr></thead><tbody>' +
+      result.testimonials.map(function (item) {
+        return '<tr>' +
+          '<td>' + esc(item.name) + '<div class="section-sub">' + esc(item.email) + '</div></td>' +
+          '<td style="max-width:36ch">' + esc(item.quote) + '</td>' +
+          '<td>' + esc(item.result_metric || '—') + '</td>' +
+          '<td>' + (item.consent_to_publish
+            ? '<span class="pill pill-good">given</span>'
+            : '<span class="pill pill-bad">none</span>') + '</td>' +
+          '<td>' + (item.verified
+            ? '<span class="pill pill-good">yes</span>'
+            : '<button class="btn btn-xs" data-verify="' + esc(item.id) + '">Mark seen</button>') + '</td>' +
+          '<td>' + (item.approved
+            ? '<span class="pill pill-good">live</span>'
+            : '<span class="pill pill-mute">hidden</span>') + '</td>' +
+          '<td style="white-space:nowrap">' +
+            (item.approved
+              ? '<button class="btn btn-xs" data-unapprove="' + esc(item.id) + '">Hide</button>'
+              : '<button class="btn btn-xs btn-primary" data-approve="' + esc(item.id) + '"' +
+                (item.consent_to_publish ? '' : ' disabled title="No consent on record"') + '>Publish</button>') +
+          '</td></tr>';
+      }).join('') + '</tbody>';
+
+    function patch(id, body) {
+      api('/testimonials/' + id, { method: 'PATCH', body: body })
+        .then(function () { loadTestimonials(); })
+        .catch(function (error) { alert(error.message); });
+    }
+    table.querySelectorAll('[data-approve]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!window.confirm('Publish this on your sales page?\n\nConfirm first that you have the customer’s written permission for this exact wording, and evidence for any numbers they quoted.')) return;
+        patch(b.dataset.approve, { approved: true });
+      });
+    });
+    table.querySelectorAll('[data-unapprove]').forEach(function (b) {
+      b.addEventListener('click', function () { patch(b.dataset.unapprove, { approved: false }); });
+    });
+    table.querySelectorAll('[data-verify]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!window.confirm('Mark this result as verified?\n\nOnly do this if you have actually seen evidence — a screenshot or export. A "verified" badge you cannot back up is worse than no badge.')) return;
+        patch(b.dataset.verify, { verified: true });
+      });
+    });
+  }
+
+  function renderSources(sources) {
+    var table = document.getElementById('sourcesTable');
+    if (!sources.length) {
+      table.innerHTML = '<tbody><tr><td class="empty">No sales yet.</td></tr></tbody>';
+      return;
+    }
+    var total = sources.reduce(function (sum, row) { return sum + row.revenue_cents; }, 0);
+    table.innerHTML =
+      '<thead><tr><th>Source</th><th class="num">Sales</th><th class="num">Revenue</th><th class="num">Share</th></tr></thead><tbody>' +
+      sources.map(function (row) {
+        return '<tr><td>' + esc(row.source) + '</td>' +
+          '<td class="num">' + row.sales + '</td>' +
+          '<td class="num">' + money(row.revenue_cents) + '</td>' +
+          '<td class="num">' + (total ? pct(row.revenue_cents / total) : '—') + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  function renderEmail(stats) {
+    var table = document.getElementById('emailTable');
+    if (!stats.length) {
+      table.innerHTML = '<tbody><tr><td class="empty">No email sent yet.</td></tr></tbody>';
+      return;
+    }
+    table.innerHTML =
+      '<thead><tr><th>Template</th><th class="num">Sent</th><th class="num">Failed</th>' +
+      '<th class="num">Opened</th><th class="num">Clicked</th></tr></thead><tbody>' +
+      stats.map(function (row) {
+        return '<tr><td>' + esc(row.template) + '</td>' +
+          '<td class="num">' + row.sent + '</td>' +
+          '<td class="num">' + (row.failed > 0
+            ? '<span class="pill pill-bad">' + row.failed + '</span>' : '0') + '</td>' +
+          '<td class="num">' + pct(row.open_rate) + '</td>' +
+          '<td class="num">' + pct(row.click_rate) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+
+  function renderFailures(data) {
+    var webhookTable = document.getElementById('webhookFailTable');
+    webhookTable.innerHTML = data.failedWebhooks.length
+      ? '<thead><tr><th>Event</th><th>Type</th><th class="num">Tries</th><th>Error</th><th>When</th></tr></thead><tbody>' +
+        data.failedWebhooks.map(function (row) {
+          return '<tr><td class="mono">' + esc(row.stripe_event_id) + '</td>' +
+            '<td>' + esc(row.type) + '</td>' +
+            '<td class="num">' + row.attempts + '</td>' +
+            '<td style="max-width:34ch">' + esc(row.last_error) + '</td>' +
+            '<td>' + esc(dateTime(row.created_at)) + '</td></tr>';
+        }).join('') + '</tbody>'
+      : '<tbody><tr><td class="empty">No failed webhooks.</td></tr></tbody>';
+
+    var emailTable = document.getElementById('emailFailTable');
+    emailTable.innerHTML = data.failedEmails.length
+      ? '<thead><tr><th>To</th><th>Template</th><th class="num">Tries</th><th>Error</th><th>When</th></tr></thead><tbody>' +
+        data.failedEmails.map(function (row) {
+          return '<tr><td>' + esc(row.recipient) + '</td>' +
+            '<td>' + esc(row.template) + '</td>' +
+            '<td class="num">' + row.attempts + '</td>' +
+            '<td style="max-width:34ch">' + esc(row.last_error) + '</td>' +
+            '<td>' + esc(dateTime(row.created_at)) + '</td></tr>';
+        }).join('') + '</tbody>'
+      : '<tbody><tr><td class="empty">No failed emails.</td></tr></tbody>';
+
+    var banner = document.getElementById('alertBanner');
+    var problems = data.failedWebhooks.length + data.failedEmails.length;
+    if (problems > 0) {
+      banner.innerHTML = '<strong>' + problems + ' thing(s) failed.</strong> ' +
+        'A customer may have paid and received nothing. Open the Failures tab.';
+      banner.classList.add('on');
+    } else {
+      banner.classList.remove('on');
+    }
+  }
+
+  /* ── Loaders ───────────────────────────────────────────────────────── */
+  function loadOverview() {
+    return api('/overview').then(function (data) {
+      renderTiles(data);
+      renderRevenueChart(data.daily);
+      renderFunnel(data.funnel);
+      renderSources(data.bySource);
+      renderEmail(data.email);
+      document.getElementById('lastUpdated').textContent =
+        'Updated ' + new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    });
+  }
+
+  function loadCustomers() {
+    var search = document.getElementById('customerSearch').value.trim();
+    var status = document.getElementById('statusFilter').value;
+    var query = '?limit=100' + (search ? '&search=' + encodeURIComponent(search) : '') +
+      (status ? '&status=' + encodeURIComponent(status) : '');
+    return api('/customers' + query).then(renderCustomers);
+  }
+
+  function loadTickets() { return api('/tickets?limit=100').then(renderTickets); }
+  function loadTestimonials() { return api('/testimonials?limit=100').then(renderTestimonials); }
+  function loadFailures() { return api('/health/failures').then(renderFailures); }
+
+  function loadAll() {
+    return Promise.all([loadOverview(), loadCustomers(), loadTickets(), loadTestimonials(), loadFailures()])
+      .catch(function (error) {
+        if (error.message !== 'unauthorized') console.error(error);
+      });
+  }
+
+  var searchTimer;
+  document.getElementById('customerSearch').addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadCustomers, 250);
+  });
+  document.getElementById('statusFilter').addEventListener('change', loadCustomers);
+
+  /* ── Tabs ──────────────────────────────────────────────────────────── */
+  document.querySelectorAll('.tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      document.querySelectorAll('.tab-panel').forEach(function (panel) {
+        panel.classList.toggle('hidden', panel.dataset.panel !== tab.dataset.tab);
+      });
+    });
+  });
+
+  /* ── Boot ──────────────────────────────────────────────────────────── */
+  function boot() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').classList.remove('hidden');
+    loadAll();
+  }
+
+  if (token) boot();
+})();
+</script>
+</body>
+</html>

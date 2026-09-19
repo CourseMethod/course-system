@@ -1,0 +1,38 @@
+{
+  "name": "course-printer-backend",
+  "version": "2.0.0",
+  "description": "Production backend for selling a digital course: Stripe checkout, signed delivery, customer records, email, analytics and admin.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node scripts/migrate.js",
+    "build-vault": "node scripts/build-vault.js",
+    "create-admin-token": "node scripts/create-admin-token.js",
+    "check-env": "node scripts/check-env.js",
+    "test:smoke": "node scripts/smoke-test.js",
+    "postinstall": "npm run build-vault || true"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "nodemailer": "^6.9.15",
+    "stripe": "^16.12.0"
+  },
+  "keywords": [
+    "stripe",
+    "course",
+    "digital-products",
+    "express"
+  ],
+  "license": "MIT",
+  "private": true
+}

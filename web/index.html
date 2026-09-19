@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Course Printer — Build and sell your own course</title>
+<meta name="description" content="A complete system for building a digital course and the machine that sells it. 40 lessons, the sales page, the checkout, the delivery — all of it.">
+
+<!-- Open Graph: controls how the link looks when someone shares it. Without
+     these, a shared link renders as a bare URL and gets a fraction of the
+     clicks. Replace the image URL with a real 1200x630 image on your domain. -->
+<meta property="og:title" content="Course Printer — Build and sell your own course">
+<meta property="og:description" content="The course, and the machine that sells it. Everything, as files you own.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+  OPERATOR NOTES — READ BEFORE YOU PUT THIS LIVE
+═══════════════════════════════════════════════════════════════════════════════
+
+  1. PRICES ARE NOT IN THIS FILE.
+     They are fetched from /api/config, which reads them from your .env. That
+     means the price shown here and the price actually charged can never drift
+     apart. To change a price, edit .env and restart the server.
+
+  2. THE COUNTDOWN IS REAL OR IT IS ABSENT.
+     The launch countdown only appears if you set LAUNCH_PRICE_ENDS_AT in .env,
+     and when it expires the server genuinely charges the higher price. There is
+     no fake timer in this page and you should not add one. A countdown that
+     resets on refresh is spotted in seconds, and a deadline you do not honour
+     is a deceptive practice under the FTC Act.
+
+  3. TESTIMONIALS ARE LOADED FROM YOUR DATABASE, NOT HARDCODED.
+     The proof section renders whatever you have approved in the admin
+     dashboard. With none approved, it renders an honest alternative instead of
+     an empty gap. DO NOT paste invented testimonials into this file. Fabricated
+     testimonials violate 16 CFR Part 465 (civil penalties per violation), and
+     payment processors treat them as a fraud signal — losing Stripe ends the
+     business overnight. See docs/Marketing-Playbook.md for how to collect real
+     ones, which the system emails your customers asking for automatically.
+
+  4. THE RESULTS BAR IS EMPTY BY DEFAULT — ON PURPOSE.
+     Search this file for "YOUR-REAL-NUMBERS". Fill it in only with figures you
+     can screenshot from your own Stripe and analytics dashboards. If you have
+     no numbers yet, leave it switched off. The page is written to convert
+     without them, because specificity about what the product IS does most of
+     the work that borrowed credibility would otherwise do.
+
+  5. EVERYTHING ELSE IS YOURS TO REWRITE.
+     The copy below sells this system. If you are selling something else,
+     replace the words and keep the structure — the structure is the part that
+     took the work.
+═══════════════════════════════════════════════════════════════════════════════
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   Two themes. Colours are defined once and referenced everywhere, so
+   rebranding is a matter of editing this block and nothing else.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --paper:        #fbfaf8;
+  --surface:      #ffffff;
+  --surface-alt:  #f4f2ee;
+  --ink:          #14100c;
+  --body:         #4a453e;
+  --muted:        #7d766c;
+  --line:         #e6e2da;
+  --line-strong:  #d4cec3;
+  --accent:       #4338ca;
+  --accent-hover: #372fa8;
+  --accent-soft:  #eef0ff;
+  --accent-line:  #c7cbfa;
+  --gold:         #8a6d1f;
+  --gold-soft:    #fdf6e3;
+  --positive:     #1f6b47;
+  --shadow-sm: 0 1px 2px rgba(20,16,12,.06), 0 1px 3px rgba(20,16,12,.04);
+  --shadow-md: 0 4px 6px rgba(20,16,12,.04), 0 10px 24px rgba(20,16,12,.07);
+  --shadow-lg: 0 8px 16px rgba(20,16,12,.05), 0 24px 56px rgba(20,16,12,.10);
+  --radius: 12px;
+  --radius-lg: 18px;
+  --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --measure: 34rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:        #111013;
+    --surface:      #191820;
+    --surface-alt:  #201f28;
+    --ink:          #f5f3ef;
+    --body:         #c3bfb7;
+    --muted:        #8e897f;
+    --line:         #2b2a34;
+    --line-strong:  #3a3945;
+    --accent:       #a5b4fc;
+    --accent-hover: #c7d2fe;
+    --accent-soft:  #1f1e35;
+    --accent-line:  #3b3a5c;
+    --gold:         #d8b75f;
+    --gold-soft:    #2a2418;
+    --positive:     #6ee7b7;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 4px 6px rgba(0,0,0,.3), 0 10px 24px rgba(0,0,0,.35);
+    --shadow-lg: 0 8px 16px rgba(0,0,0,.35), 0 24px 56px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#111013; --surface:#191820; --surface-alt:#201f28;
+  --ink:#f5f3ef; --body:#c3bfb7; --muted:#8e897f;
+  --line:#2b2a34; --line-strong:#3a3945;
+  --accent:#a5b4fc; --accent-hover:#c7d2fe; --accent-soft:#1f1e35; --accent-line:#3b3a5c;
+  --gold:#d8b75f; --gold-soft:#2a2418; --positive:#6ee7b7;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.3), 0 10px 24px rgba(0,0,0,.35);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,.35), 0 24px 56px rgba(0,0,0,.45);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--body);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1,h2,h3,h4 { color: var(--ink); line-height: 1.15; margin: 0 0 .5em; font-weight: 600; letter-spacing: -0.02em; }
+h1 { font-family: var(--serif); font-size: clamp(2.1rem, 6vw, 3.9rem); font-weight: 600; letter-spacing: -0.03em; line-height: 1.06; }
+h2 { font-family: var(--serif); font-size: clamp(1.7rem, 4vw, 2.6rem); letter-spacing: -0.025em; }
+h3 { font-size: clamp(1.15rem, 2.2vw, 1.4rem); font-weight: 650; }
+p { margin: 0 0 1.1em; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+strong { color: var(--ink); font-weight: 650; }
+em { font-style: italic; }
+
+.wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+.narrow { max-width: 660px; margin-left: auto; margin-right: auto; }
+section { padding: clamp(3.5rem, 9vw, 6.5rem) 0; }
+
+.eyebrow {
+  font-size: .75rem; font-weight: 650; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 1rem;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 60;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color .2s, box-shadow .2s;
+}
+header.scrolled { border-bottom-color: var(--line); box-shadow: var(--shadow-sm); }
+.nav { display: flex; align-items: center; justify-content: space-between; height: 62px; gap: 1rem; }
+.logo { font-family: var(--serif); font-weight: 700; font-size: 1.15rem; color: var(--ink); text-decoration: none; letter-spacing: -.02em; white-space: nowrap; }
+.nav-links { display: flex; gap: 1.6rem; align-items: center; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: .92rem; font-weight: 500; }
+.nav-links a:hover { color: var(--ink); }
+@media (max-width: 800px) { .nav-links { display: none; } }
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .92rem 1.7rem; border-radius: 10px; border: 1px solid transparent;
+  font-family: var(--sans); font-size: 1rem; font-weight: 600; letter-spacing: -.01em;
+  cursor: pointer; text-decoration: none; text-align: center;
+  transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+}
+.btn-primary { background: var(--accent); color: #fff; box-shadow: var(--shadow-md); }
+:root[data-theme="dark"] .btn-primary, :root:not([data-theme="light"]) .btn-primary { color: #14121f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn-primary { color: #14121f; } }
+.btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+.btn-primary:active { transform: translateY(0); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+.btn-ghost:hover { background: var(--surface-alt); }
+.btn-sm { padding: .55rem 1rem; font-size: .88rem; border-radius: 8px; }
+.btn-block { width: 100%; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn:focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+.hero { padding-top: clamp(3rem, 8vw, 5.5rem); padding-bottom: clamp(2.5rem, 6vw, 4rem); }
+.hero-inner { max-width: 760px; }
+.hero h1 { margin-bottom: 1.2rem; }
+.hero .lede { font-size: clamp(1.1rem, 2.4vw, 1.3rem); color: var(--body); max-width: 36rem; margin-bottom: 2rem; line-height: 1.55; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; margin-bottom: 1.2rem; }
+.hero-note { font-size: .92rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; }
+.hero-note span { display: inline-flex; align-items: center; gap: .4rem; }
+.tick { color: var(--positive); font-weight: 700; }
+
+/* Launch banner — only rendered when a real launch window is configured. */
+.launch-bar {
+  display: none; align-items: center; gap: .75rem; flex-wrap: wrap;
+  background: var(--gold-soft); border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  color: var(--ink); padding: .7rem 1.1rem; border-radius: 10px;
+  font-size: .93rem; margin-bottom: 1.8rem; max-width: 36rem;
+}
+.launch-bar.on { display: flex; }
+.launch-bar strong { color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* ── Results bar (operator's own real numbers) ────────────────────────── */
+.results { display: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-alt); }
+.results.on { display: block; }
+.results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 1.5rem 1rem; padding: 2.2rem 0; }
+.result-item { text-align: center; }
+.result-num { font-family: var(--serif); font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -.02em; }
+.result-label { font-size: .85rem; color: var(--muted); margin-top: .45rem; }
+.results-caveat { text-align: center; font-size: .8rem; color: var(--muted); padding-bottom: 1.6rem; max-width: 46rem; margin: 0 auto; }
+
+/* ── Prose ────────────────────────────────────────────────────────────── */
+.prose { max-width: var(--measure); }
+.prose p { font-size: 1.06rem; }
+.prose h2 { margin-bottom: .8rem; }
+.prose h3 { margin-top: 2.2rem; }
+.lead-in { font-size: 1.18rem; color: var(--ink); font-weight: 500; line-height: 1.5; }
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 1.7rem; box-shadow: var(--shadow-sm);
+}
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1.2rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 1.2rem; }
+
+/* ── Module list ──────────────────────────────────────────────────────── */
+.modules { display: grid; gap: .8rem; margin-top: 2.5rem; }
+.module {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  overflow: hidden; transition: border-color .15s;
+}
+.module:hover { border-color: var(--line-strong); }
+.module summary {
+  display: flex; align-items: baseline; gap: .9rem; padding: 1.15rem 1.3rem;
+  cursor: pointer; list-style: none; font-weight: 600; color: var(--ink);
+}
+.module summary::-webkit-details-marker { display: none; }
+.module-num {
+  font-family: var(--serif); font-size: .85rem; color: var(--accent); font-weight: 700;
+  min-width: 2.4rem; letter-spacing: .04em;
+}
+.module-title { flex: 1; font-size: 1.05rem; }
+.module-count { font-size: .82rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.module-body { padding: 0 1.3rem 1.3rem 4.7rem; border-top: 1px solid var(--line); padding-top: 1.1rem; }
+@media (max-width: 560px) { .module-body { padding-left: 1.3rem; } }
+.module-body p { font-size: .97rem; margin-bottom: .9rem; }
+.lesson-list { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 1.6rem; }
+@media (max-width: 620px) { .lesson-list { columns: 1; } }
+.lesson-list li {
+  font-size: .9rem; color: var(--body); padding: .28rem 0 .28rem 1.1rem;
+  position: relative; break-inside: avoid;
+}
+.lesson-list li::before { content: '—'; position: absolute; left: 0; color: var(--muted); }
+
+/* ── Fit / not-fit ────────────────────────────────────────────────────── */
+.fit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px,1fr)); gap: 1.2rem; margin-top: 2rem; }
+.fit-card { padding: 1.6rem; border-radius: var(--radius-lg); border: 1px solid var(--line); background: var(--surface); }
+.fit-card h3 { font-size: 1.05rem; margin-bottom: 1rem; display: flex; align-items: center; gap: .55rem; }
+.fit-card ul { margin: 0; padding: 0; list-style: none; }
+.fit-card li { padding: .45rem 0 .45rem 1.6rem; position: relative; font-size: .97rem; }
+.fit-yes li::before { content: '✓'; position: absolute; left: 0; color: var(--positive); font-weight: 700; }
+.fit-no li::before { content: '✕'; position: absolute; left: 0; color: var(--muted); font-weight: 600; }
+
+/* ── Proof ────────────────────────────────────────────────────────────── */
+.proof-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1.2rem; margin-top: 2.2rem; }
+.quote {
+  background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius); padding: 1.5rem;
+}
+.quote-headline { font-weight: 650; color: var(--ink); margin-bottom: .6rem; font-size: 1.02rem; }
+.quote-text { font-size: .99rem; margin-bottom: 1rem; }
+.quote-who { font-size: .88rem; color: var(--muted); display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.verified-tag {
+  font-size: .72rem; font-weight: 650; color: var(--positive); background: color-mix(in srgb, var(--positive) 12%, transparent);
+  padding: .15rem .5rem; border-radius: 99px; letter-spacing: .02em;
+}
+.no-proof { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 2rem; max-width: var(--measure); }
+
+/* ── Pricing ──────────────────────────────────────────────────────────── */
+.pricing { background: var(--surface-alt); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.price-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px,1fr)); gap: 1.4rem; margin-top: 2.5rem; align-items: start; }
+.plan {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 1.9rem; position: relative; box-shadow: var(--shadow-sm);
+}
+.plan.featured { border-color: var(--accent); border-width: 2px; box-shadow: var(--shadow-lg); }
+.plan-badge {
+  position: absolute; top: -11px; left: 1.9rem; background: var(--accent); color: #fff;
+  font-size: .7rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  padding: .28rem .7rem; border-radius: 99px;
+}
+:root[data-theme="dark"] .plan-badge { color: #14121f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .plan-badge { color: #14121f; } }
+.plan h3 { font-family: var(--serif); font-size: 1.5rem; margin-bottom: .3rem; }
+.plan-tagline { font-size: .96rem; color: var(--muted); margin-bottom: 1.3rem; min-height: 2.8em; }
+.plan-price { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .3rem; flex-wrap: wrap; }
+.price-now { font-family: var(--serif); font-size: 2.7rem; font-weight: 600; color: var(--ink); letter-spacing: -.03em; line-height: 1; }
+.price-was { font-size: 1.15rem; color: var(--muted); text-decoration: line-through; }
+.price-note { font-size: .86rem; color: var(--muted); margin-bottom: 1.4rem; }
+.plan ul { list-style: none; margin: 0 0 1.6rem; padding: 0; }
+.plan li { padding: .42rem 0 .42rem 1.6rem; position: relative; font-size: .96rem; }
+.plan li::before { content: '✓'; position: absolute; left: 0; color: var(--positive); font-weight: 700; }
+.plan-guarantee { font-size: .85rem; color: var(--muted); text-align: center; margin-top: .9rem; line-height: 1.5; }
+.cohort-note { font-size: .86rem; color: var(--gold); background: var(--gold-soft); border-radius: 8px; padding: .55rem .8rem; margin-bottom: 1rem; display: none; }
+.cohort-note.on { display: block; }
+.sold-out { opacity: .65; }
+
+/* Comparison table */
+.compare { margin-top: 3rem; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.compare table { width: 100%; border-collapse: collapse; min-width: 480px; font-size: .95rem; }
+.compare th, .compare td { padding: .8rem 1rem; text-align: left; border-bottom: 1px solid var(--line); }
+.compare th { font-weight: 650; color: var(--ink); font-size: .88rem; }
+.compare td:not(:first-child), .compare th:not(:first-child) { text-align: center; width: 22%; }
+.compare tbody tr:hover { background: var(--surface); }
+.yes { color: var(--positive); font-weight: 700; }
+.no { color: var(--muted); }
+
+/* ── Guarantee ────────────────────────────────────────────────────────── */
+.guarantee-box {
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-lg);
+  padding: clamp(1.7rem, 4vw, 2.6rem); max-width: 640px; margin: 0 auto;
+}
+.guarantee-box h2 { font-size: clamp(1.4rem, 3vw, 1.9rem); }
+
+/* ── FAQ ──────────────────────────────────────────────────────────────── */
+.faq { max-width: 700px; margin: 2.5rem auto 0; }
+.faq details { border-bottom: 1px solid var(--line); }
+.faq summary {
+  padding: 1.15rem 2rem 1.15rem 0; cursor: pointer; font-weight: 600; color: var(--ink);
+  font-size: 1.04rem; list-style: none; position: relative;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: '+'; position: absolute; right: .25rem; top: 50%; transform: translateY(-50%);
+  font-size: 1.4rem; color: var(--muted); font-weight: 400; line-height: 1;
+}
+.faq details[open] summary::after { content: '–'; }
+.faq-answer { padding: 0 0 1.4rem; font-size: 1rem; }
+.faq-answer p:last-child { margin-bottom: 0; }
+
+/* ── Final CTA ────────────────────────────────────────────────────────── */
+.final { background: var(--surface-alt); border-top: 1px solid var(--line); text-align: center; }
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+footer { padding: 3rem 0 4rem; border-top: 1px solid var(--line); font-size: .9rem; color: var(--muted); }
+.footer-inner { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: space-between; align-items: flex-start; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 1.2rem; }
+footer a { color: var(--muted); text-decoration: none; }
+footer a:hover { color: var(--ink); text-decoration: underline; }
+.disclaimer { margin-top: 1.8rem; font-size: .82rem; line-height: 1.6; max-width: 62ch; }
+
+/* ── Modal (support / resend / refund) ────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15,12,9,.55); backdrop-filter: blur(3px);
+  display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px;
+}
+.modal-backdrop.on { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--radius-lg); padding: 1.9rem;
+  max-width: 460px; width: 100%; box-shadow: var(--shadow-lg); border: 1px solid var(--line);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal h3 { margin-bottom: .6rem; }
+.modal label { display: block; font-size: .88rem; font-weight: 600; color: var(--ink); margin: 1rem 0 .35rem; }
+.modal input, .modal textarea {
+  width: 100%; padding: .7rem .85rem; border: 1px solid var(--line-strong); border-radius: 8px;
+  font-family: var(--sans); font-size: .97rem; background: var(--paper); color: var(--ink);
+}
+.modal textarea { min-height: 96px; resize: vertical; }
+.modal-msg { font-size: .92rem; margin-top: .9rem; padding: .7rem .85rem; border-radius: 8px; display: none; }
+.modal-msg.on { display: block; }
+.modal-msg.ok { background: color-mix(in srgb, var(--positive) 12%, transparent); color: var(--positive); }
+.modal-msg.err { background: color-mix(in srgb, #c0392b 12%, transparent); color: #c0392b; }
+.modal-actions { display: flex; gap: .6rem; margin-top: 1.3rem; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+</style>
+</head>
+<body>
+
+<a href="#main" class="sr-only">Skip to content</a>
+
+<header id="siteHeader">
+  <div class="wrap nav">
+    <a href="#" class="logo">Course&nbsp;Printer</a>
+    <nav class="nav-links">
+      <a href="#whats-inside">What's inside</a>
+      <a href="#fit">Is it for you</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">Questions</a>
+    </nav>
+    <a href="#pricing" class="btn btn-primary btn-sm">Get it</a>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ═══ HERO ═══════════════════════════════════════════════════════════
+     The headline does one job: name the reader's actual situation more
+     precisely than they expect. Specificity is the hook — a vague promise
+     ("change your life") reads as noise, a precise one reads as competence. -->
+<section class="hero">
+  <div class="wrap hero-inner">
+
+    <div class="launch-bar" id="launchBar">
+      <span>Launch pricing ends in <strong id="countdown">—</strong>.</span>
+      <span style="color:var(--muted)">Then it genuinely goes up — the server enforces it.</span>
+    </div>
+
+    <h1>You already know something worth&nbsp;teaching. You just haven't packaged&nbsp;it.</h1>
+
+    <p class="lede">
+      This is the whole system for turning what you know into a course people pay for — the
+      40 lessons that tell you exactly what to build, and the working machine that sells it.
+      Files you own, on a domain you control.
+    </p>
+
+    <div class="hero-cta">
+      <a href="#pricing" class="btn btn-primary">See what's included</a>
+      <a href="#whats-inside" class="btn btn-ghost">Read the lesson list first</a>
+    </div>
+
+    <div class="hero-note">
+      <span><span class="tick">✓</span> One payment, yours forever</span>
+      <span><span class="tick">✓</span> 14-day refund if you use it</span>
+      <span><span class="tick">✓</span> No subscription, no upsell</span>
+    </div>
+
+    <div style="margin-top: 2.2rem; padding: 1.2rem 1.5rem; background: var(--accent-soft); border-radius: var(--radius); border-left: 4px solid var(--accent); text-align: center;">
+      <p style="margin: 0; font-weight: 600; color: var(--accent); font-size: .95rem;">
+        No camera. No face. No performance skills required.
+      </p>
+      <p style="margin: .4rem 0 0; font-size: .92rem; color: var(--body);">
+        Everything works with plain text and screen recordings.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ RESULTS BAR ═════════════════════════════════════════════════════
+     OPERATOR: this is switched OFF by default.
+
+     To switch it on, change `showResults` to true in the config block near
+     the bottom of this file and replace every YOUR-REAL-NUMBERS value with a
+     figure you can screenshot from your own dashboard.
+
+     If you have no results yet, leave it off. A page with no numbers and
+     specific, verifiable claims about the product outperforms a page with
+     numbers a reader suspects you made up — and suspicion is the default
+     setting for anyone who has seen a course ad before. -->
+<section class="results" id="resultsBar">
+  <div class="wrap">
+    <div class="results-grid" id="resultsGrid"></div>
+    <p class="results-caveat" id="resultsCaveat"></p>
+  </div>
+</section>
+
+<!-- ═══ THE PROBLEM ════════════════════════════════════════════════════
+     Agitation without manipulation: describe the reader's situation
+     accurately enough that they feel understood. No invented urgency, no
+     "the wealthy don't want you to know". Accuracy IS the persuasion. -->
+<section>
+  <div class="wrap">
+    <div class="prose">
+      <p class="eyebrow">The actual problem</p>
+      <h2>You know something worth teaching. But then what?</h2>
+
+      <p>
+        You've thought about selling a course before. You have the knowledge. But building one means solving four hard problems:
+      </p>
+
+      <ul style="margin: 1.6rem 0; padding-left: 1.5rem;">
+        <li><strong>What to teach.</strong> You know too much. Which part is actually valuable?</li>
+        <li><strong>How to structure it.</strong> What order? How long per lesson? Where does one end?</li>
+        <li><strong>The tooling cost.</strong> Platform, payment processing, emails, dashboard. A week of setup you don't want to do.</li>
+        <li><strong>Getting customers.</strong> Finishing doesn't mean anyone finds it. Distribution is a separate skill.</li>
+      </ul>
+
+      <p>
+        All four problems are solved. Someone already worked out the answers and wrote them down. That's what you're buying: not having to figure it out yourself.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ WHAT IT IS ═════════════════════════════════════════════════════
+     Direct specificity. The single strongest trust-builder available to a
+     seller with no testimonials yet is describing the product so concretely
+     that it's obvious you actually built it. -->
+<section style="background:var(--surface-alt); border-top:1px solid var(--line); border-bottom:1px solid var(--line);">
+  <div class="wrap">
+    <div class="prose">
+      <p class="eyebrow">What this actually is</p>
+      <h2>A folder of files you own forever.</h2>
+
+      <p>
+        No login. No platform to take it away. Download the ZIP, open it, and it's yours — permanently offline, readable in any text editor, resellable to your customers.
+      </p>
+
+      <p>Inside:</p>
+    </div>
+
+    <div class="grid-3" style="margin-top:2.2rem;">
+      <div class="card">
+        <h3>40 written lessons</h3>
+        <p style="font-size:.97rem; margin:0;">
+          Across five modules, in Markdown, cross-linked so you can follow a thread instead of
+          reading front to back. Each ends with a specific action — not "reflect on this", but
+          a thing to do before the next lesson.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Fill-in templates</h3>
+        <p style="font-size:.97rem; margin:0;">
+          Email sequences, reel scripts, sales page structure, support replies, a 30-day
+          posting calendar. The blank-page problem, removed.
+        </p>
+      </div>
+      <div class="card">
+        <h3>The selling machine</h3>
+        <p style="font-size:.97rem; margin:0;">
+          <em>The Engine tier.</em> This page, the checkout, automatic delivery, the customer
+          database, the dashboard — as code you edit and deploy. Not a demo. The actual system
+          that sold you this.
+        </p>
+      </div>
+    </div>
+
+    <div class="prose" style="margin-top:2.5rem;">
+      <p>
+        <strong>The system selling you this page is the system you get.</strong> Same code, same checkout, same dashboard. You can read the source before you buy — which is unusual, and the reason I'm comfortable doing it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ WHAT'S INSIDE ═════════════════════════════════════════════════ -->
+<section id="whats-inside">
+  <div class="wrap">
+    <div class="prose">
+      <p class="eyebrow">The curriculum</p>
+      <h2>All 40 lessons, listed.</h2>
+      <p>
+        Not a teaser. The full contents, so you can judge whether it covers what you need before
+        you spend anything. Open a module to see its lessons.
+      </p>
+    </div>
+
+    <div class="modules">
+      <details class="module" open>
+        <summary>
+          <span class="module-num">01</span>
+          <span class="module-title">Mindset</span>
+          <span class="module-count">8 lessons</span>
+        </summary>
+        <div class="module-body">
+          <p>
+            Deciding what to teach, and getting past the belief that you're not qualified. This is
+            the module people skim and then have to come back to, because every later decision
+            depends on the one you make here.
+          </p>
+          <ul class="lesson-list">
+            <li>Why this works right now</li>
+            <li>Picking your topic in 12 minutes</li>
+            <li>The expertise gap (why you're qualified)</li>
+            <li>Finding who it's for</li>
+            <li>Imposter syndrome, practically</li>
+            <li>Ethics and what not to promise</li>
+            <li>What realistic actually looks like</li>
+            <li>Committing to a scope you'll finish</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary>
+          <span class="module-num">02</span>
+          <span class="module-title">Build</span>
+          <span class="module-count">9 lessons</span>
+        </summary>
+        <div class="module-body">
+          <p>
+            Turning what you know into a structured course. Setup, outlining, writing, and using AI
+            properly — as a drafting tool that speeds you up, not a ghostwriter that produces
+            generic filler anyone can spot.
+          </p>
+          <ul class="lesson-list">
+            <li>Obsidian setup, start to finish</li>
+            <li>Vault structure that scales</li>
+            <li>Outlining: modules and lessons</li>
+            <li>The anatomy of a lesson that works</li>
+            <li>Writing the first draft fast</li>
+            <li>Using AI without sounding like AI</li>
+            <li>Examples, stories and case studies</li>
+            <li>Action items and exercises</li>
+            <li>Packaging and shipping the vault</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary>
+          <span class="module-num">03</span>
+          <span class="module-title">Sell</span>
+          <span class="module-count">9 lessons</span>
+        </summary>
+        <div class="module-body">
+          <p>
+            Pricing, the sales page, checkout, delivery and the emails. Including the parts most
+            courses skip entirely: refunds, chargebacks and what you're legally allowed to claim.
+          </p>
+          <ul class="lesson-list">
+            <li>Pricing: the actual framework</li>
+            <li>Tiers, and when a second one helps</li>
+            <li>The sales page, section by section</li>
+            <li>Writing copy that isn't hype</li>
+            <li>Honest urgency and real scarcity</li>
+            <li>Stripe setup end to end</li>
+            <li>Automatic delivery</li>
+            <li>The email sequence that follows a sale</li>
+            <li>Refunds, chargebacks and support</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary>
+          <span class="module-num">04</span>
+          <span class="module-title">Market</span>
+          <span class="module-count">9 lessons</span>
+        </summary>
+        <div class="module-body">
+          <p>
+            Getting in front of people from a standing start. Short-form video, the content
+            calendar, turning comments into conversations, and reading your numbers well enough to
+            know what to do more of.
+          </p>
+          <ul class="lesson-list">
+            <li>Distribution from zero followers</li>
+            <li>Choosing your platform</li>
+            <li>Hooks that earn the next 3 seconds</li>
+            <li>Reel scripts and formats</li>
+            <li>The 30-day posting calendar</li>
+            <li>Comments, DMs and conversations</li>
+            <li>Email list from day one</li>
+            <li>Reading your analytics</li>
+            <li>What to do when nothing works</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="module">
+        <summary>
+          <span class="module-num">05</span>
+          <span class="module-title">Beyond the first launch</span>
+          <span class="module-count">5 lessons</span>
+        </summary>
+        <div class="module-body">
+          <p>
+            For after you've made sales and want the thing to be a business rather than an event.
+          </p>
+          <ul class="lesson-list">
+            <li>Your second product</li>
+            <li>Raising prices without losing buyers</li>
+            <li>Affiliates and partnerships</li>
+            <li>Collecting real testimonials</li>
+            <li>Systemising so it runs without you</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FIT ════════════════════════════════════════════════════════════
+     Disqualification. Telling people not to buy is the most efficient trust
+     mechanism on a sales page, and it genuinely lowers your refund rate —
+     the customer who was never going to succeed costs you a refund, a
+     support thread and sometimes a chargeback. -->
+<section id="fit" style="background:var(--surface-alt); border-top:1px solid var(--line); border-bottom:1px solid var(--line);">
+  <div class="wrap">
+    <div class="prose">
+      <p class="eyebrow">Honest fit</p>
+      <h2>This is wrong for a lot of people.</h2>
+      <p>
+        I'd rather you read this and decide against it than buy, feel misled, and want your money
+        back. Both of us come out ahead.
+      </p>
+    </div>
+
+    <div class="fit-grid">
+      <div class="fit-card fit-yes">
+        <h3><span class="tick">✓</span> It fits if</h3>
+        <ul>
+          <li>You know something well enough that beginners ask you about it</li>
+          <li>You can find 4–6 hours a week for a couple of months</li>
+          <li>You'd rather write than be on camera</li>
+          <li>You want to own the platform, not rent one</li>
+          <li>You can post consistently for 30 days before judging the result</li>
+          <li>You're fine with a first version that's imperfect</li>
+        </ul>
+      </div>
+      <div class="fit-card fit-no">
+        <h3>It doesn't fit if</h3>
+        <ul>
+          <li>You need money this month — this is slower than that</li>
+          <li>You want something passive that runs itself from day one</li>
+          <li>You're looking for a guaranteed income figure. Nobody can honestly give you one</li>
+          <li>You won't write. The writing is the product</li>
+          <li>You want to teach something you haven't actually done</li>
+          <li>You'll quit if the first ten posts get no traction. Most first ten posts get no traction</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="prose" style="margin-top:2.2rem;">
+      <p>
+        On that last column, particularly the third one: this page will never tell you what you'll
+        earn. Not out of caution — because it would be a lie. Outcomes here depend on your topic,
+        your audience, how much you publish and how long you keep going, and anyone who quotes you
+        a number without knowing those things is selling you a feeling.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PROOF ══════════════════════════════════════════════════════════
+     Rendered from /api/testimonials — approved and consented entries only.
+     With none, the honest fallback below is shown instead. -->
+<section id="proof" style="background: var(--paper); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+  <div class="wrap">
+    <div class="prose">
+      <p class="eyebrow">What actually happens</p>
+      <h2 id="proofHeading">Read what they sent.</h2>
+      <p style="margin-bottom: 2rem;">
+        Names redacted to first letters. Everything else is exactly as each buyer sent it.
+      </p>
+    </div>
+    <div id="proofContent"></div>
+  </div>
+</section>
+
+<!-- ═══ PRICING ════════════════════════════════════════════════════════ -->
+<section class="pricing" id="pricing">
+  <div class="wrap">
+    <div class="prose">
+      <p class="eyebrow">Pricing</p>
+      <h2>Pick your path.</h2>
+      <p>
+        <strong>The Method</strong> is the course alone — lessons, templates, everything you need to build and sell.
+      </p>
+      <p>
+        <strong>The Engine</strong> is the same course plus the working system behind this page — so you don't have to build it yourself. Plug and play.
+      </p>
+      <p style="margin-bottom: 0;">
+        No subscription, no recurring charges. One payment, yours forever.
+      </p>
+    </div>
+
+    <div class="price-grid" id="priceGrid">
+      <!-- Populated from /api/config so prices here and at checkout cannot diverge. -->
+      <div class="plan"><p style="color:var(--muted)">Loading pricing…</p></div>
+    </div>
+
+    <div class="compare">
+      <table>
+        <caption class="sr-only">Feature comparison between The Method and The Engine</caption>
+        <thead>
+          <tr><th scope="col">What you get</th><th scope="col">The Method</th><th scope="col">The Engine</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>40 lessons, five modules</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Templates, scripts, calendar</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>AI prompts used to build it</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Lifetime updates</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>Sales page source code</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Stripe checkout, wired up</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Automatic delivery system</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Customer database + dashboard</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Email system with tracking</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Deployment + security guides</td><td class="no">—</td><td class="yes">✓</td></tr>
+          <tr><td>Email support</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+          <tr><td>30 days direct 1-on-1 help</td><td class="no">—</td><td class="yes">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prose" style="margin-top:2.5rem;">
+      <h3 style="margin-top:0;">Which one?</h3>
+      <p>
+        <strong>The Method</strong> if you haven't written the course yet. That's the real work, and
+        it's ahead of you. You can sell a finished course through Gumroad or Payhip in an afternoon
+        — they take a cut, but for your first few sales that's the sensible trade.
+      </p>
+      <p>
+        <strong>The Engine</strong> if you want to own the whole pipeline, or you already know you'd
+        rather not hand a percentage of every sale to a platform forever. It's also the right pick
+        if the technical setup is the part you expect to stall on, since that's what the 30 days of
+        support is for.
+      </p>
+      <p style="color:var(--muted); font-size:.95rem;">
+        Start with The Method and upgrade later if you want — you'll pay the difference, not the
+        full price again.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ GUARANTEE ══════════════════════════════════════════════════════ -->
+<section>
+  <div class="wrap">
+    <div class="guarantee-box">
+      <p class="eyebrow">The guarantee</p>
+      <h2>14 days. Full refund if you've put in work.</h2>
+      <p>
+        Complete at least two lessons and implement what you learned. Within 14 days, if you've applied the material and it's not right for you, email me and I'll refund you. No questions about the refund itself — just confirmation that you actually used it.
+      </p>
+      <p>
+        <strong>You keep the files.</strong> Everything you've downloaded is yours to keep.
+      </p>
+      <p style="margin-bottom:0;">
+        This guarantee isn't about making refunds easy for the sake of it. It's about making sure the product works for people who actually engage with it. If you bought it hoping to passively absorb information without opening it, a refund won't help either of us.
+      </p>
+      <p style="margin-top:1.3rem; margin-bottom:0;">
+        <button class="btn btn-ghost btn-sm" type="button" data-modal="refund">Request a refund</button>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ════════════════════════════════════════════════════════════
+     Objection handling. Each answers the question actually being asked
+     underneath the stated one, and answers it honestly — including the ones
+     where the honest answer is not maximally flattering. A defensive FAQ
+     reads as evasion, which is worse than the objection itself. -->
+<section id="faq" style="background:var(--surface-alt); border-top:1px solid var(--line);">
+  <div class="wrap">
+    <div class="prose">
+      <p class="eyebrow">Questions</p>
+      <h2>The ones worth asking.</h2>
+    </div>
+
+    <div class="faq">
+      <details>
+        <summary>Isn't this just a course about selling courses?</summary>
+        <div class="faq-answer">
+          <p>
+            It is, and that deserves a straight answer rather than a defensive one, because the
+            instinct behind the question is sound. There's a real version of this business and a
+            parasitic version, and they look similar from outside.
+          </p>
+          <p>
+            The parasitic version teaches you to sell courses about selling courses, to people who
+            will sell courses about selling courses. Nothing of value is created at any level.
+            That's the pattern you're right to be suspicious of.
+          </p>
+          <p>
+            The whole system here is built for you to teach <em>your</em> thing — the bookkeeping
+            you've done for nine years, the language you speak, the software you know. Modules 1
+            and 2 are entirely about extracting a course from your existing experience. If your
+            plan is to buy this and immediately sell a course about buying this, you'll find the
+            material actively unhelpful, and I'd rather you didn't.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>How much money will I make?</summary>
+        <div class="faq-answer">
+          <p>
+            I don't know, and neither does anyone else selling you something in this category.
+          </p>
+          <p>
+            It depends on what you teach, whether people want it, how well you explain it, how much
+            you publish, and how long you keep going after the first month of silence. Those
+            variables swamp anything the system itself contributes. A well-executed course on a
+            topic nobody wants earns nothing. A rough course on something people urgently need can
+            do well.
+          </p>
+          <p>
+            What I can tell you concretely: the costs are small (a domain, optionally ~$20/month
+            for an AI subscription while drafting, and 2.9% + 30¢ per sale to Stripe), the work is
+            front-loaded, and the file you produce can be sold indefinitely without being rebuilt.
+            That's the actual shape of the opportunity. Anyone giving you a figure is guessing, and
+            probably not in your favour.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>I don't have an audience. Is that fatal?</summary>
+        <div class="faq-answer">
+          <p>
+            No, but it does change the order of operations, and Module 4 is largely about this.
+          </p>
+          <p>
+            With no audience, distribution is a separate project from building, and it starts the
+            day you start writing rather than the day you finish. The realistic version: you post
+            consistently for several weeks to near-silence, because that's what the beginning looks
+            like for almost everyone, and then it starts compounding.
+          </p>
+          <p>
+            The dishonest version of this answer promises you a viral formula. There isn't one.
+            There's a process that works if you run it long enough, and Module 4 is that process
+            written down — including a lesson specifically on what to do when nothing is working,
+            because that's the point at which most people stop.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>What if I'm not actually an expert?</summary>
+        <div class="faq-answer">
+          <p>
+            You don't need to be the best in the world. You need to be meaningfully further along
+            than the person you're teaching, and able to remember what it was like not to know.
+          </p>
+          <p>
+            That second part is the real qualification, and genuine experts are often worse at it.
+            Someone two years into a skill frequently teaches beginners better than someone twenty
+            years in, because they still remember which bits were confusing.
+          </p>
+          <p>
+            The line that matters is honesty about where you stand. "Here's how I did this, and
+            what I'd skip if I started again" is a legitimate and valuable course. "I'm a leading
+            authority" when you aren't is how you end up with refunds and a reputation problem.
+            Module 1 covers exactly how to position this.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>How long before I have something to sell?</summary>
+        <div class="faq-answer">
+          <p>
+            At 4–6 hours a week, most people have a finished first course in four to eight weeks.
+            The spread is mostly about how long you spend deciding what to teach — the writing
+            itself is faster than people expect once the outline exists.
+          </p>
+          <p>
+            Selling it is a different timeline. You can have a live page and working checkout in an
+            afternoon with The Engine. Having people arrive at that page is the slow part, and it's
+            measured in months of consistent posting, not days.
+          </p>
+          <p>
+            If you see "48 hours to a profitable course" anywhere — including in older versions of
+            my own material — treat it as marketing rather than a forecast. You can build something
+            in a weekend. You will not have a business by Monday.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Why is it this cheap? What's the catch?</summary>
+        <div class="faq-answer">
+          <p>
+            No catch, and the reason is structural rather than generous.
+          </p>
+          <p>
+            The cost of delivering this to one more person is effectively zero — it's a file. The
+            work was writing it. At this price more people buy, more people actually finish it
+            (cheap things get used, weirdly, when they're specific enough), and more of them send
+            me results I can learn from.
+          </p>
+          <p>
+            There's no upsell ladder behind it. No $2,000 mastermind, no coaching call, no
+            "certification". The Engine tier is the only other thing that exists, it's listed
+            openly above, and if you buy The Method you'll get exactly one email mentioning it.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Can I resell this, or teach it as my own?</summary>
+        <div class="faq-answer">
+          <p>
+            You can use everything in it to build and sell your own product, including the code,
+            the templates and the structure. That's what it's for, and you owe nothing on what you
+            earn.
+          </p>
+          <p>
+            You can't resell the vault itself as a finished product, or redistribute the lessons
+            verbatim. The distinction is between using the system and reselling the system.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>What do I actually need to run this?</summary>
+        <div class="faq-answer">
+          <p>
+            For <strong>The Method</strong>: a computer and a text editor. Obsidian is free and
+            recommended but not required — the lessons are plain Markdown files that open anywhere.
+          </p>
+          <p>
+            For <strong>The Engine</strong>: a domain (~$12/year), a Stripe account (free, takes a
+            percentage per sale), and somewhere to run a small Node.js server. Free tiers on
+            Railway, Render or Fly work fine at launch volumes. The deployment guide walks through
+            each, written for someone who has not deployed anything before.
+          </p>
+          <p>
+            You do not need to know how to code. You do need to be willing to follow a technical
+            guide carefully and not panic at a terminal.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Do I have to show my face?</summary>
+        <div class="faq-answer">
+          <p>
+            No. The course is written, and everything in the distribution module works with screen
+            recordings, text-on-screen and voiceover.
+          </p>
+          <p>
+            A caveat worth having: showing your face does tend to build trust faster, and pretending
+            otherwise would be doing you a disservice. It's a trade, not a free lunch. Plenty of
+            people run this entirely faceless — it's just slightly slower to build the same trust.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>I bought something like this before and it was useless.</summary>
+        <div class="faq-answer">
+          <p>
+            Probably fair. A lot of this category is recycled generalities — "provide value",
+            "be consistent" — sold at a price that assumes you won't ask for a refund.
+          </p>
+          <p>
+            The test I'd apply, to this or anything else: can you see what's actually inside before
+            paying? The full lesson list is above, unhidden. The Engine's entire source code is the
+            thing running this page. And the refund is 14 days, unconditional, one email.
+          </p>
+          <p>
+            If it's the same thing you bought before, you'll know within an hour of opening it, and
+            you can have your money back the same day.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>What happens right after I pay?</summary>
+        <div class="faq-answer">
+          <p>
+            An email arrives within about a minute with your download link. Unzip it, open the
+            folder in Obsidian (or any editor), start at <code>00-Command-Center.md</code>.
+          </p>
+          <p>
+            If it doesn't arrive, check spam first, then
+            <button class="btn-link-inline" type="button" data-modal="resend"
+              style="background:none;border:none;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline;">request
+              a fresh link</button> — it's instant and self-serve. Links expire after 72 hours for
+            security, and you can generate new ones forever at no cost.
+          </p>
+        </div>
+      </details>
+
+      <details>
+        <summary>Is my payment secure?</summary>
+        <div class="faq-answer">
+          <p>
+            Payment is handled entirely by Stripe. Your card details go directly to them and never
+            touch this server — I never see, store or have access to your card number.
+          </p>
+          <p>
+            What is stored here: your email address, which tier you bought, and the timestamp. That
+            's what's needed to deliver the product and honour a refund. Nothing is sold or shared.
+          </p>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FINAL CTA ══════════════════════════════════════════════════════ -->
+<section class="final">
+  <div class="wrap narrow">
+    <h2>The thing you know is still worth teaching.</h2>
+    <p style="font-size:1.1rem; max-width:32rem; margin:0 auto 2rem;">
+      It'll still be worth teaching in a year, too. The only variable is whether you've packaged it
+      by then.
+    </p>
+    <a href="#pricing" class="btn btn-primary">See the two options</a>
+    <p style="font-size:.9rem; color:var(--muted); margin-top:1.3rem;">
+      14-day refund, no questions asked. One payment, yours permanently.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <div>
+        <div class="logo" style="font-size:1rem; margin-bottom:.5rem;">Course Printer</div>
+        <div>&copy; <span id="year"></span> Course Printer</div>
+      </div>
+      <div class="footer-links">
+        <button class="btn-footer" type="button" data-modal="resend" style="background:none;border:none;padding:0;color:var(--muted);cursor:pointer;font:inherit;">Resend download</button>
+        <button class="btn-footer" type="button" data-modal="support" style="background:none;border:none;padding:0;color:var(--muted);cursor:pointer;font:inherit;">Contact support</button>
+        <button class="btn-footer" type="button" data-modal="refund" style="background:none;border:none;padding:0;color:var(--muted);cursor:pointer;font:inherit;">Request refund</button>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+      </div>
+    </div>
+
+    <!-- OPERATOR: this disclaimer is not boilerplate to delete. If you make any
+         claim about outcomes anywhere on this page, you need it, and you need it
+         to be true. Read docs/Marketing-Playbook.md before changing it. -->
+    <p class="disclaimer">
+      <strong>On results:</strong> this page makes no income claim, and nothing here should be read
+      as a promise of earnings. What you make from selling a course depends on your topic, your
+      audience, your execution and your persistence. Many people who buy a course like this earn
+      nothing from it, usually because they don't finish. Any testimonials shown are real, published
+      with the customer's permission, and reflect that individual's experience rather than a typical
+      result.
+    </p>
+  </div>
+</footer>
+
+<!-- ═══ MODALS ═════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle">—</h3>
+    <p id="modalIntro" style="font-size:.95rem; color:var(--muted);"></p>
+    <form id="modalForm">
+      <div id="modalFields"></div>
+      <div class="modal-msg" id="modalMsg"></div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary btn-block" id="modalSubmit">Send</button>
+        <button type="button" class="btn btn-ghost" id="modalClose">Close</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     OPERATOR CONFIG
+     The only block in this file you need to edit by hand. Everything else
+     (prices, countdown, testimonials) comes from the server.
+     ═══════════════════════════════════════════════════════════════════════ */
+  var SITE = {
+    // Switch to true ONLY when every number below is one you can screenshot
+    // from your own Stripe / analytics dashboard. See the note above the
+    // results section for why this defaults to off.
+    showResults: false,
+
+    results: [
+      { number: 'YOUR-REAL-NUMBERS', label: 'e.g. Views in 30 days' },
+      { number: 'YOUR-REAL-NUMBERS', label: 'e.g. Revenue, first month' },
+      { number: 'YOUR-REAL-NUMBERS', label: 'e.g. Customers' },
+      { number: 'YOUR-REAL-NUMBERS', label: 'e.g. Ad spend' }
+    ],
+
+    // Shown under the numbers. Must describe whose results these are and over
+    // what period. "These are my own results" is a claim you must be able to
+    // back up; if they are a customer's, say so and get their permission.
+    resultsCaveat: 'These are my own results from [PERIOD], not a customer average, and not a projection of what you will earn. Your outcome depends on your topic, your audience and how long you keep going.'
+  };
+
+  var API = 'https://coursemethod1.vercel.app/api';
+
+  /* ── Small helpers ─────────────────────────────────────────────────── */
+  function $(sel) { return document.querySelector(sel); }
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  /* ── Header shadow on scroll ───────────────────────────────────────── */
+  var header = document.getElementById('siteHeader');
+  var onScroll = function () {
+    header.classList.toggle('scrolled', window.scrollY > 8);
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* ── Anonymous session key ─────────────────────────────────────────────
+     A random id in sessionStorage, used only to join a visit to a purchase
+     for funnel maths. Not a cookie, not a fingerprint, not shared with
+     anyone. Wrapped in try/catch because storage throws in private mode. */
+  var sessionKey = (function () {
+    try {
+      var existing = sessionStorage.getItem('cp_session');
+      if (existing) return existing;
+      var fresh = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random())
+        .replace(/-/g, '').slice(0, 32);
+      sessionStorage.setItem('cp_session', fresh);
+      return fresh;
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  /* ── Attribution from the URL ──────────────────────────────────────── */
+  var attribution = (function () {
+    var params = new URLSearchParams(window.location.search);
+    return {
+      utmSource: params.get('utm_source') || null,
+      utmMedium: params.get('utm_medium') || null,
+      utmCampaign: params.get('utm_campaign') || null,
+      referrer: document.referrer ? document.referrer.slice(0, 200) : null
+    };
+  })();
+
+  /* ── Analytics beacon ──────────────────────────────────────────────── */
+  function track(type, payload) {
+    try {
+      var body = JSON.stringify({ type: type, sessionKey: sessionKey, payload: payload || null });
+      // sendBeacon survives the page being closed mid-request, which is
+      // exactly when a checkout-abandonment event needs to fire.
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(API + '/track', new Blob([body], { type: 'application/json' }));
+      } else {
+        fetch(API + '/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true });
+      }
+    } catch (e) { /* analytics must never break the page */ }
+  }
+
+  track('page_view', { path: location.pathname });
+
+  // Fire once when pricing scrolls into view.
+  if ('IntersectionObserver' in window) {
+    var pricingSection = document.getElementById('pricing');
+    var seen = false;
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting && !seen) { seen = true; track('pricing_view'); }
+      });
+    }, { threshold: 0.25 }).observe(pricingSection);
+  }
+
+  /* ── Results bar ───────────────────────────────────────────────────── */
+  (function renderResults() {
+    if (!SITE.showResults) return;
+
+    var unfilled = SITE.results.some(function (r) { return String(r.number).indexOf('YOUR-REAL-NUMBERS') !== -1; });
+    if (unfilled) {
+      // Refuse to render placeholder text as if it were data.
+      console.warn('[Course Printer] showResults is true but the numbers are still placeholders. Results bar hidden.');
+      return;
+    }
+
+    var grid = document.getElementById('resultsGrid');
+    SITE.results.forEach(function (item) {
+      var wrapper = el('div', 'result-item');
+      wrapper.appendChild(el('div', 'result-num', item.number));
+      wrapper.appendChild(el('div', 'result-label', item.label));
+      grid.appendChild(wrapper);
+    });
+    document.getElementById('resultsCaveat').textContent = SITE.resultsCaveat;
+    document.getElementById('resultsBar').classList.add('on');
+  })();
+
+  /* ── Pricing, loaded from the server ───────────────────────────────── */
+  var stripe = null;
+  var config = null;
+
+  function formatCountdown(msRemaining) {
+    var totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
+    var days = Math.floor(totalSeconds / 86400);
+    var hours = Math.floor((totalSeconds % 86400) / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    var seconds = totalSeconds % 60;
+    if (days > 0) return days + 'd ' + hours + 'h ' + minutes + 'm';
+    if (hours > 0) return hours + 'h ' + minutes + 'm ' + seconds + 's';
+    return minutes + 'm ' + seconds + 's';
+  }
+
+  function startCountdown(endsAt) {
+    var bar = document.getElementById('launchBar');
+    var output = document.getElementById('countdown');
+    var endTime = new Date(endsAt).getTime();
+
+    function tick() {
+      var remaining = endTime - Date.now();
+      if (remaining <= 0) {
+        // The window really has closed. Reload so the page shows the new,
+        // higher prices the server is now charging — rather than continuing
+        // to display a stale offer.
+        bar.classList.remove('on');
+        window.location.reload();
+        return;
+      }
+      output.textContent = formatCountdown(remaining);
+    }
+
+    tick();
+    bar.classList.add('on');
+    setInterval(tick, 1000);
+  }
+
+  function renderPricing(pricing) {
+    var grid = document.getElementById('priceGrid');
+    grid.innerHTML = '';
+
+    pricing.tiers.forEach(function (tier, index) {
+      var plan = el('div', 'plan' + (index === 1 ? ' featured' : '') + (tier.available ? '' : ' sold-out'));
+
+      if (index === 1) plan.appendChild(el('div', 'plan-badge', 'Everything'));
+
+      plan.appendChild(el('h3', null, tier.name));
+      plan.appendChild(el('p', 'plan-tagline', tier.tagline));
+
+      var priceRow = el('div', 'plan-price');
+      priceRow.appendChild(el('span', 'price-now', tier.priceFormatted));
+      // A struck-through "was" price is shown ONLY when a real launch window
+      // is active and the higher price is what the server will genuinely
+      // charge afterwards. Never as a permanent decoration.
+      if (tier.compareAtFormatted) {
+        priceRow.appendChild(el('span', 'price-was', tier.compareAtFormatted));
+      }
+      plan.appendChild(priceRow);
+
+      plan.appendChild(el('p', 'price-note',
+        tier.compareAtFormatted
+          ? 'One payment · Launch price, ' + tier.compareAtFormatted + ' after'
+          : 'One payment · Instant download'));
+
+      // Real cohort availability, when a genuine cap is configured.
+      if (tier.cohort && tier.cohort.limit) {
+        var cohortNote = el('div', 'cohort-note on');
+        cohortNote.textContent = tier.cohort.soldOut
+          ? 'This cohort is full. It includes direct 1-on-1 time, so the limit is real.'
+          : tier.cohort.remaining + ' of ' + tier.cohort.limit + ' places left in this cohort.';
+        plan.appendChild(cohortNote);
+      }
+
+      var list = el('ul');
+      tier.features.forEach(function (feature) { list.appendChild(el('li', null, feature)); });
+      plan.appendChild(list);
+
+      var button = el('button', 'btn btn-primary btn-block');
+      button.type = 'button';
+      if (tier.available) {
+        button.textContent = 'Get ' + tier.name + ' — ' + tier.priceFormatted;
+        button.addEventListener('click', function () { startCheckout(tier.id, button); });
+      } else {
+        button.textContent = 'Currently full';
+        button.disabled = true;
+      }
+      plan.appendChild(button);
+
+      plan.appendChild(el('p', 'plan-guarantee', '14-day refund if you use it.'));
+      grid.appendChild(plan);
+    });
+  }
+
+  function loadConfig() {
+    return fetch(API + '/config')
+      .then(function (response) {
+        if (!response.ok) throw new Error('config request failed');
+        return response.json();
+      })
+      .then(function (data) {
+        config = data;
+        if (window.Stripe && data.stripePublishableKey) {
+          stripe = Stripe(data.stripePublishableKey);
+        }
+        renderPricing(data.pricing);
+        if (data.pricing.launch && data.pricing.launch.active) {
+          startCountdown(data.pricing.launch.endsAt);
+        }
+      })
+      .catch(function (error) {
+        console.error('Could not load pricing', error);
+        var grid = document.getElementById('priceGrid');
+        grid.innerHTML =
+          '<div class="plan"><h3>Pricing unavailable</h3>' +
+          '<p style="color:var(--muted);font-size:.95rem">We could not load pricing just now. ' +
+          'Refresh the page, or email us and we will send you a direct payment link.</p>' +
+          '<button class="btn btn-ghost btn-block" type="button" data-modal="support">Email us</button></div>';
+        bindModalTriggers();
+      });
+  }
+
+  /* ── Checkout ──────────────────────────────────────────────────────── */
+  var checkoutInFlight = false;
+
+  function startCheckout(tierId, button) {
+    if (checkoutInFlight) return;
+    checkoutInFlight = true;
+
+    var originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Opening secure checkout…';
+
+    fetch(API + '/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier: tierId, sessionKey: sessionKey, attribution: attribution })
+    })
+      .then(function (response) {
+        return response.json().then(function (body) { return { ok: response.ok, body: body }; });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          throw new Error((result.body && result.body.error && result.body.error.message) ||
+            'Checkout could not be started.');
+        }
+        // Full-page redirect to Stripe's hosted checkout. Card details are
+        // entered on Stripe's domain and never touch this server.
+        window.location.href = result.body.url;
+      })
+      .catch(function (error) {
+        checkoutInFlight = false;
+        button.disabled = false;
+        button.textContent = originalLabel;
+        track('checkout_abandoned', { tier: tierId, reason: 'error' });
+
+        openModal('support', error.message +
+          ' Send us a message and we will email you a direct payment link.');
+      });
+  }
+
+  /* ── Proof section ─────────────────────────────────────────────────── */
+  function renderProof() {
+    var container = document.getElementById('proofContent');
+
+    fetch(API + '/testimonials')
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        var list = (data && data.testimonials) || [];
+
+        if (list.length === 0) {
+          /* ── The honest empty state ───────────────────────────────────
+             No testimonials yet. Rather than leaving a conspicuous gap or
+             inventing quotes, say so plainly and point at the proof that
+             does exist: the product itself is inspectable, and the refund
+             carries the risk. Candour here reads as confidence, and it is
+             the only option that is both effective and legal. */
+          document.getElementById('proofHeading').textContent = 'I don’t have testimonials to show you yet.';
+
+          var box = el('div', 'no-proof');
+          box.innerHTML =
+            '<p>This is new, so there is no wall of five-star quotes here. I could write some. ' +
+            'Plenty of pages do. I would rather tell you what I actually have instead.</p>' +
+            '<p><strong>You can inspect the product before buying.</strong> The complete lesson list ' +
+            'is above — all 40, not a teaser. The Engine tier’s source code is the system ' +
+            'running this page, including the checkout you are about to use.</p>' +
+            '<p><strong>The risk sits with me, not you.</strong> Fourteen days, unconditional, one ' +
+            'email, no retention script. If it is not what you expected you are out nothing but ' +
+            'the time it took to find out.</p>' +
+            '<p style="margin-bottom:0"><strong>And when real results come in, they go here</strong> ' +
+            '— with permission, in the customer’s own words, and with numbers I have ' +
+            'actually seen evidence for. Not before.</p>';
+          container.appendChild(box);
+          return;
+        }
+
+        var grid = el('div', 'proof-grid');
+        list.forEach(function (item) {
+          var card = el('div', 'quote');
+          if (item.headline) card.appendChild(el('div', 'quote-headline', item.headline));
+          card.appendChild(el('div', 'quote-text', '“' + item.quote + '”'));
+
+          var who = el('div', 'quote-who');
+          who.appendChild(el('span', null, '— ' + item.name +
+            (item.result_timeframe ? ', ' + item.result_timeframe : '')));
+          // The "verified" tag appears only where the operator has recorded
+          // that they saw evidence for the claim. It is a real distinction,
+          // not a decorative badge.
+          if (item.verified) who.appendChild(el('span', 'verified-tag', 'Result verified'));
+          card.appendChild(who);
+
+          grid.appendChild(card);
+        });
+        container.appendChild(grid);
+      })
+      .catch(function () {
+        container.innerHTML = '';
+      });
+  }
+
+  /* ── Modals ────────────────────────────────────────────────────────── */
+  var MODALS = {
+    resend: {
+      title: 'Resend your download link',
+      intro: 'Enter the email you bought with and we will send a fresh link straight away.',
+      fields: [{ name: 'email', label: 'Your email', type: 'email', required: true }],
+      endpoint: '/download/resend',
+      submitLabel: 'Send me a new link'
+    },
+    support: {
+      title: 'Contact support',
+      intro: 'Goes straight to a real person. Replies within 24 hours, usually sooner.',
+      fields: [
+        { name: 'email', label: 'Your email', type: 'email', required: true },
+        { name: 'subject', label: 'Subject', type: 'text', required: true },
+        { name: 'message', label: 'What is going on?', type: 'textarea', required: true }
+      ],
+      endpoint: '/support/ticket',
+      submitLabel: 'Send message'
+    },
+    refund: {
+      title: 'Request a refund',
+      intro: 'No questions, no retention email. Processed within one business day.',
+      fields: [
+        { name: 'email', label: 'The email you bought with', type: 'email', required: true },
+        { name: 'reason', label: 'Anything you want to tell me? (optional)', type: 'textarea', required: false }
+      ],
+      endpoint: '/support/refund',
+      submitLabel: 'Request refund'
+    }
+  };
+
+  var backdrop = document.getElementById('modalBackdrop');
+  var modalForm = document.getElementById('modalForm');
+  var modalMsg = document.getElementById('modalMsg');
+  var activeModal = null;
+  var lastFocused = null;
+
+  function openModal(kind, introOverride) {
+    var spec = MODALS[kind];
+    if (!spec) return;
+    activeModal = spec;
+    lastFocused = document.activeElement;
+
+    document.getElementById('modalTitle').textContent = spec.title;
+    document.getElementById('modalIntro').textContent = introOverride || spec.intro;
+    document.getElementById('modalSubmit').textContent = spec.submitLabel;
+    document.getElementById('modalSubmit').disabled = false;
+
+    var fieldsContainer = document.getElementById('modalFields');
+    fieldsContainer.innerHTML = '';
+
+    spec.fields.forEach(function (field) {
+      var id = 'f_' + field.name;
+      var label = el('label', null, field.label);
+      label.setAttribute('for', id);
+      fieldsContainer.appendChild(label);
+
+      var input = field.type === 'textarea'
+        ? document.createElement('textarea')
+        : document.createElement('input');
+      if (field.type !== 'textarea') input.type = field.type;
+      input.id = id;
+      input.name = field.name;
+      if (field.required) input.required = true;
+      fieldsContainer.appendChild(input);
+    });
+
+    modalMsg.className = 'modal-msg';
+    modalMsg.textContent = '';
+    backdrop.classList.add('on');
+
+    var first = fieldsContainer.querySelector('input, textarea');
+    if (first) first.focus();
+  }
+
+  function closeModal() {
+    backdrop.classList.remove('on');
+    activeModal = null;
+    if (lastFocused && lastFocused.focus) lastFocused.focus();
+  }
+
+  modalForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+    if (!activeModal) return;
+
+    var submitButton = document.getElementById('modalSubmit');
+    var payload = {};
+    activeModal.fields.forEach(function (field) {
+      var input = document.getElementById('f_' + field.name);
+      if (input && input.value.trim()) payload[field.name] = input.value.trim();
+    });
+
+    submitButton.disabled = true;
+    submitButton.textContent = 'Sending…';
+    modalMsg.className = 'modal-msg';
+
+    fetch(API + activeModal.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (response) {
+        return response.json().then(function (body) { return { ok: response.ok, body: body }; });
+      })
+      .then(function (result) {
+        submitButton.disabled = false;
+        submitButton.textContent = activeModal.submitLabel;
+
+        if (result.ok) {
+          modalMsg.className = 'modal-msg on ok';
+          modalMsg.textContent = result.body.message ||
+            (result.body.reference ? 'Received. Your reference is ' + result.body.reference + '.' : 'Done.');
+          modalForm.querySelectorAll('input, textarea').forEach(function (input) { input.value = ''; });
+        } else {
+          modalMsg.className = 'modal-msg on err';
+          var issues = result.body.error && result.body.error.issues;
+          modalMsg.textContent = issues && issues.length
+            ? issues.map(function (issue) { return issue.message; }).join(' ')
+            : (result.body.error && result.body.error.message) || 'Something went wrong. Please try again.';
+        }
+      })
+      .catch(function () {
+        submitButton.disabled = false;
+        submitButton.textContent = activeModal.submitLabel;
+        modalMsg.className = 'modal-msg on err';
+        modalMsg.textContent = 'Could not reach the server. Check your connection and try again.';
+      });
+  });
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  backdrop.addEventListener('click', function (event) {
+    if (event.target === backdrop) closeModal();
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && backdrop.classList.contains('on')) closeModal();
+  });
+
+  function bindModalTriggers() {
+    document.querySelectorAll('[data-modal]').forEach(function (trigger) {
+      if (trigger.dataset.bound) return;
+      trigger.dataset.bound = '1';
+      trigger.addEventListener('click', function () { openModal(trigger.dataset.modal); });
+    });
+  }
+
+  /* ── Go ────────────────────────────────────────────────────────────── */
+  bindModalTriggers();
+  loadConfig();
+  renderProof();
+})();
+</script>
+</body>
+</html>

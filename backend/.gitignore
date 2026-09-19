@@ -1,0 +1,32 @@
+# Secrets — never commit these.
+# .env holds your live Stripe secret key and admin token. Committing it to a
+# public repo means someone can charge cards as you and read every customer
+# record. Bots scan GitHub for exactly this, within minutes of a push.
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Customer data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Build output
+dist/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+.vercel
+.env*

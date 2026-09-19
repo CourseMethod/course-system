@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You're in — Course Printer</title>
+<meta name="robots" content="noindex, nofollow">
+
+<!--
+  POST-PURCHASE PAGE
+
+  The job of this page is narrower than it looks. A customer who has just paid
+  is in a brief window of mild anxiety — did that work, where is my thing, was
+  this a mistake. Everything here serves one of three ends:
+
+    1. Confirm the payment landed.
+    2. Get them to the file.
+    3. Tell them exactly what to do first, so the purchase turns into use.
+
+  Number 3 is where the money is, commercially speaking. A customer who opens
+  the vault in the first hour rarely refunds. One who files it away "for the
+  weekend" often does.
+
+  Note the polling behaviour: Stripe's webhook usually lands before the
+  customer's browser finishes redirecting, but not always. Rather than showing
+  a scary "not found" during that one-to-three second gap, the page shows a
+  calm "finishing up" state and polls. This one detail removes a surprising
+  amount of support email.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --paper:#fbfaf8; --surface:#ffffff; --surface-alt:#f4f2ee;
+  --ink:#14100c; --body:#4a453e; --muted:#7d766c;
+  --line:#e6e2da; --line-strong:#d4cec3;
+  --accent:#4338ca; --accent-hover:#372fa8; --accent-soft:#eef0ff;
+  --positive:#1f6b47; --warn:#8a6d1f; --warn-soft:#fdf6e3;
+  --shadow-md: 0 4px 6px rgba(20,16,12,.04), 0 10px 24px rgba(20,16,12,.07);
+  --shadow-lg: 0 8px 16px rgba(20,16,12,.05), 0 24px 56px rgba(20,16,12,.10);
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:#111013; --surface:#191820; --surface-alt:#201f28;
+    --ink:#f5f3ef; --body:#c3bfb7; --muted:#8e897f;
+    --line:#2b2a34; --line-strong:#3a3945;
+    --accent:#a5b4fc; --accent-hover:#c7d2fe; --accent-soft:#1f1e35;
+    --positive:#6ee7b7; --warn:#d8b75f; --warn-soft:#2a2418;
+    --shadow-md: 0 4px 6px rgba(0,0,0,.3), 0 10px 24px rgba(0,0,0,.35);
+    --shadow-lg: 0 8px 16px rgba(0,0,0,.35), 0 24px 56px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#111013; --surface:#191820; --surface-alt:#201f28;
+  --ink:#f5f3ef; --body:#c3bfb7; --muted:#8e897f;
+  --line:#2b2a34; --line-strong:#3a3945;
+  --accent:#a5b4fc; --accent-hover:#c7d2fe; --accent-soft:#1f1e35;
+  --positive:#6ee7b7; --warn:#d8b75f; --warn-soft:#2a2418;
+}
+
+*,*::before,*::after { box-sizing:border-box; }
+body {
+  margin:0; background:var(--paper); color:var(--body);
+  font-family:var(--sans); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3 { color:var(--ink); margin:0 0 .5em; line-height:1.15; letter-spacing:-.02em; }
+h1 { font-family:var(--serif); font-size:clamp(1.9rem,5vw,2.9rem); font-weight:600; letter-spacing:-.03em; }
+h2 { font-size:clamp(1.2rem,3vw,1.5rem); font-weight:650; }
+h3 { font-size:1.05rem; font-weight:650; }
+p { margin:0 0 1.1em; }
+a { color:var(--accent); text-underline-offset:2px; }
+strong { color:var(--ink); font-weight:650; }
+code {
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.9em;
+  background:var(--surface-alt); padding:.15em .4em; border-radius:4px;
+}
+
+.wrap { max-width:660px; margin:0 auto; padding:0 16px; }
+.page { padding:clamp(2.5rem,7vw,4.5rem) 0 4rem; }
+
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+  padding:1rem 1.9rem; border-radius:10px; border:1px solid transparent;
+  font-family:var(--sans); font-size:1.02rem; font-weight:600;
+  cursor:pointer; text-decoration:none; transition:transform .14s, box-shadow .14s, background .14s;
+}
+.btn-primary { background:var(--accent); color:#fff; box-shadow:var(--shadow-md); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn-primary { color:#14121f; } }
+:root[data-theme="dark"] .btn-primary { color:#14121f; }
+.btn-primary:hover { background:var(--accent-hover); transform:translateY(-1px); box-shadow:var(--shadow-lg); }
+.btn-ghost { background:transparent; color:var(--ink); border-color:var(--line-strong); }
+.btn-ghost:hover { background:var(--surface-alt); }
+.btn-block { width:100%; }
+.btn:disabled { opacity:.55; cursor:not-allowed; transform:none; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+
+.status-icon {
+  width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:1.6rem; margin-bottom:1.5rem; background:color-mix(in srgb, var(--positive) 14%, transparent);
+  color:var(--positive);
+}
+.spinner {
+  width:52px; height:52px; border-radius:50%; margin-bottom:1.5rem;
+  border:3px solid var(--line); border-top-color:var(--accent); animation:spin .9s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration:2s; } }
+
+.receipt {
+  background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  padding:1.3rem 1.5rem; margin:1.8rem 0; font-size:.95rem;
+}
+.receipt-row { display:flex; justify-content:space-between; gap:1rem; padding:.35rem 0; }
+.receipt-row span:first-child { color:var(--muted); }
+.receipt-row span:last-child { color:var(--ink); font-weight:600; text-align:right; word-break:break-word; }
+
+.download-card {
+  background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius:16px; padding:1.8rem; margin:2rem 0; text-align:center;
+}
+.download-card h2 { margin-bottom:.4rem; }
+.download-note { font-size:.88rem; color:var(--muted); margin:1rem 0 0; }
+
+.steps { counter-reset:step; list-style:none; padding:0; margin:1.5rem 0 0; }
+.steps li {
+  counter-increment:step; position:relative; padding:0 0 1.5rem 3rem;
+  border-left:1px solid var(--line); margin-left:.9rem;
+}
+.steps li:last-child { border-left-color:transparent; padding-bottom:0; }
+.steps li::before {
+  content:counter(step); position:absolute; left:-.9rem; top:0;
+  width:1.8rem; height:1.8rem; border-radius:50%; background:var(--accent); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:.85rem; font-weight:700;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .steps li::before { color:#14121f; } }
+:root[data-theme="dark"] .steps li::before { color:#14121f; }
+.steps h3 { margin-bottom:.25rem; }
+.steps p { font-size:.97rem; margin-bottom:0; }
+
+.callout {
+  background:var(--surface-alt); border:1px solid var(--line);
+  border-radius:12px; padding:1.2rem 1.4rem; margin:1.8rem 0; font-size:.97rem;
+}
+.callout.warn { background:var(--warn-soft); border-color:color-mix(in srgb, var(--warn) 35%, transparent); }
+.callout p:last-child { margin-bottom:0; }
+
+hr { border:0; border-top:1px solid var(--line); margin:3rem 0; }
+
+.resend-form { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:1rem; }
+.resend-form input {
+  flex:1 1 220px; padding:.75rem .9rem; border:1px solid var(--line-strong);
+  border-radius:8px; font-family:var(--sans); font-size:.97rem;
+  background:var(--paper); color:var(--ink);
+}
+.msg { font-size:.93rem; margin-top:.8rem; padding:.7rem .9rem; border-radius:8px; display:none; }
+.msg.on { display:block; }
+.msg.ok { background:color-mix(in srgb, var(--positive) 12%, transparent); color:var(--positive); }
+.msg.err { background:color-mix(in srgb,#c0392b 12%, transparent); color:#c0392b; }
+
+footer { border-top:1px solid var(--line); padding:2rem 0 3rem; font-size:.88rem; color:var(--muted); }
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="wrap">
+
+    <!-- ── State A: verifying ─────────────────────────────────────────── -->
+    <div id="stateLoading">
+      <div class="spinner" role="status" aria-label="Confirming your payment"></div>
+      <h1>Confirming your payment…</h1>
+      <p>One moment. This usually takes a second or two.</p>
+    </div>
+
+    <!-- ── State B: paid, webhook still landing ───────────────────────── -->
+    <div id="statePending" class="hidden">
+      <div class="spinner" role="status" aria-label="Preparing your download"></div>
+      <h1>Payment received. Preparing your download…</h1>
+      <p>
+        Your payment went through. We're just setting up your access — this takes a few seconds
+        and this page will update on its own.
+      </p>
+      <p style="color:var(--muted); font-size:.95rem;">
+        You can close this page safely if you'd rather. Your download link is being emailed to you
+        either way.
+      </p>
+    </div>
+
+    <!-- ── State C: success ───────────────────────────────────────────── -->
+    <div id="stateSuccess" class="hidden">
+      <div class="status-icon" aria-hidden="true">✓</div>
+      <h1>You're in.</h1>
+      <p style="font-size:1.1rem;">
+        Payment confirmed, and your download link is on its way to
+        <strong id="customerEmail">your inbox</strong>.
+      </p>
+
+      <div class="receipt">
+        <div class="receipt-row"><span>Product</span><span id="receiptTier">—</span></div>
+        <div class="receipt-row"><span>Amount</span><span id="receiptAmount">—</span></div>
+        <div class="receipt-row"><span>Email</span><span id="receiptEmail">—</span></div>
+      </div>
+
+      <div class="download-card">
+        <h2>Get your files</h2>
+        <p style="font-size:.95rem; color:var(--muted); margin-bottom:1.2rem;">
+          The same link is in your email — this is just faster.
+        </p>
+        <button class="btn btn-primary btn-block" id="downloadBtn">Send my download link</button>
+        <div class="msg" id="downloadMsg"></div>
+        <p class="download-note">
+          Links last 72 hours. You can request a new one any time, free, forever.
+        </p>
+      </div>
+
+      <hr>
+
+      <h2>What to do in the next 10 minutes</h2>
+      <p style="color:var(--muted); font-size:.97rem;">
+        Genuinely worth doing now rather than later. The people who open this in the first hour are
+        the ones who finish.
+      </p>
+
+      <ol class="steps">
+        <li>
+          <h3>Unzip the download</h3>
+          <p>You'll get a folder of Markdown files. That's the whole course — no installer, no account.</p>
+        </li>
+        <li>
+          <h3>Install Obsidian (free)</h3>
+          <p>
+            <a href="https://obsidian.md" target="_blank" rel="noopener noreferrer">obsidian.md</a> —
+            it turns the folder into a navigable course with working links between lessons. Optional
+            but strongly recommended. Any text editor works otherwise.
+          </p>
+        </li>
+        <li>
+          <h3>Open folder as vault</h3>
+          <p>In Obsidian, choose <em>Open folder as vault</em> and point it at the folder you unzipped.</p>
+        </li>
+        <li>
+          <h3>Start at the Command Center</h3>
+          <p>
+            Open <code>00-Command-Center.md</code>. It's the map — it tells you what to read and in
+            what order, so you never have to guess.
+          </p>
+        </li>
+        <li>
+          <h3>Do one lesson. Not twenty.</h3>
+          <p>
+            Read <code>01-Mindset/02-Picking-Your-Topic.md</code> and do the exercise at the bottom.
+            Twelve minutes. It's the decision everything else hangs on, and the single most common
+            place people stall is leaving it open while trying to move ahead.
+          </p>
+        </li>
+      </ol>
+
+      <div class="callout">
+        <p>
+          <strong>One thing worth knowing now.</strong> Don't read the whole thing first. The people
+          who finish read one lesson, do the thing at the bottom of it, then read the next. The ones
+          who binge all forty over a weekend feel productive and have built nothing by Monday.
+        </p>
+      </div>
+
+      <div class="callout warn">
+        <p>
+          <strong>Email didn't arrive?</strong> Check spam and promotions first — that's where it is
+          about nine times out of ten. Still nothing? Use the button above, or email
+          <a href="#" id="supportLink">support</a> and we'll sort it out the same day.
+        </p>
+      </div>
+
+      <hr>
+
+      <h2>If you need anything</h2>
+      <p>
+        Reply to any email we send you and it reaches a real person. Within 24 hours, usually much
+        sooner. Broken link, wrong file, changed your mind — all fine, just say so.
+      </p>
+      <p>
+        <strong>Changed your mind?</strong> 14 days, no questions, no retention script. One email and
+        it's done.
+      </p>
+    </div>
+
+    <!-- ── State D: something went wrong ──────────────────────────────── -->
+    <div id="stateError" class="hidden">
+      <div class="status-icon" style="background:color-mix(in srgb,#c0392b 14%,transparent); color:#c0392b;" aria-hidden="true">!</div>
+      <h1>We couldn't confirm that</h1>
+      <p id="errorDetail">
+        We weren't able to verify this purchase. If you've been charged, don't worry — nothing is
+        lost and we can sort it out immediately.
+      </p>
+
+      <div class="callout">
+        <p><strong>Most likely, one of these:</strong></p>
+        <p style="margin:0 0 .5em;">
+          You reached this page without completing checkout — in which case nothing was charged.
+        </p>
+        <p style="margin:0;">
+          Or the link was opened much later, or in a different browser. Your access still exists;
+          the page just can't read it from here.
+        </p>
+      </div>
+
+      <h3 style="margin-top:2rem;">Get your download by email</h3>
+      <p style="font-size:.97rem;">Enter the address you paid with and we'll send your link.</p>
+      <form class="resend-form" id="resendForm">
+        <input type="email" id="resendEmail" placeholder="you@example.com" required aria-label="Your email address">
+        <button type="submit" class="btn btn-primary">Send link</button>
+      </form>
+      <div class="msg" id="resendMsg"></div>
+
+      <p style="margin-top:2rem;">
+        <a href="/">Back to the main page</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p style="margin:0;">&copy; <span id="year"></span> Course Printer · <a href="/">Home</a></p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var API = '/api';
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  function show(id) {
+    ['stateLoading', 'statePending', 'stateSuccess', 'stateError'].forEach(function (state) {
+      document.getElementById(state).classList.toggle('hidden', state !== id);
+    });
+  }
+
+  function setMsg(elementId, text, kind) {
+    var node = document.getElementById(elementId);
+    node.className = 'msg on ' + kind;
+    node.textContent = text;
+  }
+
+  var sessionId = new URLSearchParams(window.location.search).get('session_id');
+
+  if (!sessionId) {
+    show('stateError');
+    document.getElementById('errorDetail').textContent =
+      'This page needs a checkout reference to look up your purchase, and there isn’t one in the link. ' +
+      'If you have already paid, use the form below and we’ll email your download straight away.';
+  } else {
+    verify(0);
+  }
+
+  /**
+   * Verify the purchase, polling while the webhook is still in flight.
+   *
+   * `paid` true with `fulfilled` false is the normal, brief window between
+   * Stripe redirecting the customer and Stripe's webhook reaching our server.
+   * Showing an error during that window would generate support email for a
+   * problem that resolves itself in two seconds, so we poll instead — backing
+   * off, and capping at ~30 seconds before falling back to the resend form.
+   */
+  function verify(attempt) {
+    fetch(API + '/verify-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: sessionId })
+    })
+      .then(function (response) {
+        return response.json().then(function (body) { return { ok: response.ok, body: body }; });
+      })
+      .then(function (result) {
+        if (!result.ok) throw new Error('verify failed');
+        var data = result.body;
+
+        if (data.paid && data.fulfilled) {
+          renderSuccess(data);
+          return;
+        }
+
+        if (data.paid && !data.fulfilled) {
+          show('statePending');
+          if (attempt < 10) {
+            setTimeout(function () { verify(attempt + 1); }, Math.min(1000 + attempt * 500, 4000));
+          } else {
+            // Paid but fulfilment has not landed in ~30s. The payment is
+            // definitely fine, so show the receipt and route them to the
+            // resend path rather than leaving them staring at a spinner.
+            renderSuccess(data);
+            setMsg('downloadMsg',
+              'Your access is taking longer than usual to set up. Press the button above and we will email your link the moment it is ready.',
+              'err');
+          }
+          return;
+        }
+
+        show('stateError');
+        document.getElementById('errorDetail').textContent =
+          'This checkout wasn’t completed, so nothing has been charged. If you meant to buy, ' +
+          'head back and try again — or if you think you were charged, use the form below.';
+      })
+      .catch(function () {
+        show('stateError');
+      });
+  }
+
+  function renderSuccess(data) {
+    if (data.email) {
+      document.getElementById('customerEmail').textContent = data.email;
+      document.getElementById('receiptEmail').textContent = data.email;
+    }
+    document.getElementById('receiptTier').textContent = data.tierName || data.tier || '—';
+    document.getElementById('receiptAmount').textContent = data.amountFormatted || '—';
+    show('stateSuccess');
+
+    // Wire the download button to the same self-serve resend endpoint the
+    // emails use, so there is one code path for "get me my file".
+    var button = document.getElementById('downloadBtn');
+    button.addEventListener('click', function () {
+      if (!data.email) {
+        setMsg('downloadMsg', 'We need your email to send the link. Please check the email we already sent you.', 'err');
+        return;
+      }
+      button.disabled = true;
+      button.textContent = 'Sending…';
+
+      fetch(API + '/download/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email })
+      })
+        .then(function (response) { return response.json(); })
+        .then(function (body) {
+          button.disabled = false;
+          button.textContent = 'Send my download link';
+          setMsg('downloadMsg', body.message || 'Sent. Check your inbox.', 'ok');
+        })
+        .catch(function () {
+          button.disabled = false;
+          button.textContent = 'Send my download link';
+          setMsg('downloadMsg', 'Could not reach the server. Please try again in a moment.', 'err');
+        });
+    });
+  }
+
+  // Resend form on the error state.
+  document.getElementById('resendForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    var email = document.getElementById('resendEmail').value.trim();
+    if (!email) return;
+
+    fetch(API + '/download/resend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    })
+      .then(function (response) { return response.json().then(function (b) { return { ok: response.ok, body: b }; }); })
+      .then(function (result) {
+        setMsg('resendMsg',
+          result.body.message || 'If that address has a purchase, a link is on its way.',
+          result.ok ? 'ok' : 'err');
+      })
+      .catch(function () {
+        setMsg('resendMsg', 'Could not reach the server. Please try again.', 'err');
+      });
+  });
+
+  // Fill in the support mailto from server config.
+  fetch(API + '/support/info')
+    .then(function (response) { return response.json(); })
+    .then(function (info) {
+      if (info.supportEmail) {
+        var link = document.getElementById('supportLink');
+        link.href = 'mailto:' + info.supportEmail;
+        link.textContent = info.supportEmail;
+      }
+    })
+    .catch(function () { /* non-critical */ });
+})();
+</script>
+</body>
+</html>
