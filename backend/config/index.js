@@ -174,6 +174,15 @@ const config = {
     engineCohortLimit: int('ENGINE_COHORT_LIMIT', { fallback: 0, min: 0 }),
   },
 
+  // Gumroad is the merchant of record once these are set: it takes the payment,
+  // handles VAT, and delivers the file. While they are empty the buy buttons keep
+  // using the built-in Stripe checkout, so setting up Gumroad and switching over
+  // are two separate, independently reversible steps.
+  checkout: {
+    gumroadMethodUrl: str('GUMROAD_METHOD_URL', { fallback: '' }).trim(),
+    gumroadEngineUrl: str('GUMROAD_ENGINE_URL', { fallback: '' }).trim(),
+  },
+
   delivery: {
     methodZip: path.resolve(__dirname, '..', str('VAULT_ZIP_PATH', { fallback: './dist/course-printer-vault.zip' })),
     engineZip: path.resolve(__dirname, '..', str('VAULT_ZIP_ENGINE_PATH', { fallback: './dist/course-printer-engine.zip' })),
