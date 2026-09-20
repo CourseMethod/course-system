@@ -28,10 +28,7 @@ router.get('/config', (req, res) => {
   const methodAfter = config.pricing.methodAfterLaunch;
   const engineAfter = config.pricing.engineAfterLaunch;
 
-  // Format as dollars
-  const formatPrice = (cents) => {
-    return '$' + (cents / 100).toFixed(2).replace(/\.?0+$/, '');
-  };
+  const SYM = { usd: '$', eur: '€', gbp: '£', cad: 'CA$', aud: 'A$' }; const CUR = SYM[config.pricing.currency] || ''; const formatPrice = (cents) => CUR + (cents / 100).toFixed(2).replace(/\.?0+$/, '');
 
   res.json({
     stripePublishableKey: config.stripe.publishableKey,
