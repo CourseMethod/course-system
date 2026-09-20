@@ -33,7 +33,7 @@ const stripe = Stripe(config.stripe.secretKey, {
   // before our own retry wrapper takes over.
   maxNetworkRetries: 2,
   timeout: 20_000,
-  appInfo: { name: 'Course Printer', version: '2.0.0' },
+  appInfo: { name: 'Course Method', version: '2.0.0' },
 });
 
 /**
