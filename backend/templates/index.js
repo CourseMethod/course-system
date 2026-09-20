@@ -602,7 +602,7 @@ function adminAlert({ title, lines }) {
   `;
 
   return {
-    subject: `[Course Printer] ${title}`,
+    subject: `[Course Method] ${title}`,
     html: L.render({ title, preheader: title, content }),
     text: L.toPlainText(content),
   };
