@@ -52,7 +52,7 @@ router.get('/config', (req, res) => {
           compareAtFormatted: launchActive ? formatPrice(methodAfter) : null,
           available: true,
           features: [
-            'Full Course Printer vault — 40 lessons, 5 modules',
+            'Full Course Method vault — 40 lessons, 5 modules',
             'Step-by-step faceless course build guide',
             'Positioning framework, niche finder, audience research',
             'Fill-in templates for everything',
