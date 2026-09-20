@@ -1,0 +1,13 @@
+{
+  "name": "course-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deployment entry point. The server lives in backend/, but it is installed and started from the repository root so that vault/ and web/ are present in the image: server.js serves the sales page from ../web, and build-vault packages the customer ZIPs from ../vault. Building from backend/ alone leaves both of those outside the build context.",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "scripts": {
+    "postinstall": "cd backend && npm install",
+    "start": "cd backend && npm start"
+  }
+}
