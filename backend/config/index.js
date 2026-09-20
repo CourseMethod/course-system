@@ -142,7 +142,7 @@ const config = {
   },
 
   email: {
-    transport: oneOf('EMAIL_TRANSPORT', ['smtp', 'gmail', 'console'], 'console'),
+    transport: oneOf('EMAIL_TRANSPORT', ['smtp', 'gmail', 'brevo', 'console'], 'console'),
     from: str('EMAIL_FROM', { fallback: 'Course Printer <hello@example.com>' }),
     supportEmail: str('SUPPORT_EMAIL', { fallback: 'hello@example.com' }),
     smtp: {
@@ -155,6 +155,12 @@ const config = {
     gmail: {
       user: str('GMAIL_USER'),
       appPassword: str('GMAIL_APP_PASSWORD', { secret: true }),
+    },
+    // Speaks HTTPS rather than SMTP. Most managed hosts (Railway among them)
+    // block outbound 25/465/587 outright, which makes every SMTP provider hang
+    // rather than fail — so on those platforms this is the only option that works.
+    brevo: {
+      apiKey: str('BREVO_API_KEY', { secret: true }),
     },
   },
 
@@ -255,6 +261,9 @@ if (config.security.tokenSecret && config.security.tokenSecret === config.securi
 // 6. Email that is not actually configured.
 if (config.email.transport === 'smtp' && (!config.email.smtp.host || !config.email.smtp.user)) {
   errors.push('EMAIL_TRANSPORT=smtp requires SMTP_HOST, SMTP_USER and SMTP_PASSWORD.');
+}
+if (config.email.transport === 'brevo' && !config.email.brevo.apiKey) {
+  errors.push('EMAIL_TRANSPORT=brevo requires BREVO_API_KEY. Create one under SMTP & API in the Brevo dashboard.');
 }
 if (config.email.transport === 'gmail' && (!config.email.gmail.user || !config.email.gmail.appPassword)) {
   errors.push('EMAIL_TRANSPORT=gmail requires GMAIL_USER and GMAIL_APP_PASSWORD (an App Password, not your login password).');
