@@ -164,8 +164,6 @@ async function start() {
   // Non-fatal checks that produce actionable warnings rather than a refusal to
   // start. A server that takes payments but cannot email is still better than
   // no server — the sale is recorded and recoverable.
-  await emailService.verifyTransport();
-
   const artifacts = deliveryService.checkArtifacts();
   if (!artifacts.ok) {
     logger.warn(
@@ -206,6 +204,13 @@ async function start() {
   // idle timeout and causes sporadic 502s under keep-alive. 65 > 60 fixes it.
   server.keepAliveTimeout = 65_000;
   server.headersTimeout = 66_000;
+
+  // Verify the mail transport only once the port is open, and do not await it.
+  // verifyTransport never throws, so awaiting it before listening looked safe —
+  // but a mail host that hangs instead of refusing (a blocked SMTP port behaves
+  // exactly like that) never settles, so app.listen was never reached and the
+  // entire site served 502s over a check that is explicitly non-fatal.
+  emailService.verifyTransport();
 
   setupGracefulShutdown(server);
 
