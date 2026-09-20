@@ -185,7 +185,7 @@ async function start() {
       port: config.port,
       environment: config.env,
       publicUrl: config.publicUrl,
-      stripeMode: config.stripe.secretKey.startsWith('sk_live_') ? 'LIVE' : 'test',
+      stripeMode: config.stripe.isLiveMode ? 'LIVE' : 'test',
       emailTransport: config.email.transport,
     });
 
@@ -196,7 +196,7 @@ async function start() {
   Admin        ${config.publicUrl}/admin.html
   Health       ${config.publicUrl}/api/health
 
-  Stripe is in ${config.stripe.secretKey.startsWith('sk_live_') ? 'LIVE' : 'TEST'} mode.
+  Stripe is in ${config.stripe.isLiveMode ? 'LIVE' : 'TEST'} mode.
   To receive webhooks locally:  stripe listen --forward-to localhost:${config.port}/api/webhook
 `);
     }
