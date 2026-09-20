@@ -198,8 +198,8 @@ footer { border-top:1px solid var(--line); padding:2rem 0 3rem; font-size:.88rem
       <div class="status-icon" aria-hidden="true">✓</div>
       <h1>You're in.</h1>
       <p style="font-size:1.1rem;">
-        Payment confirmed, and your download link is on its way to
-        <strong id="customerEmail">your inbox</strong>.
+        Payment confirmed. Your download is ready below, and a copy of the link is on its
+        way to <strong id="customerEmail">your inbox</strong>.
       </p>
 
       <div class="receipt">
@@ -211,7 +211,8 @@ footer { border-top:1px solid var(--line); padding:2rem 0 3rem; font-size:.88rem
       <div class="download-card">
         <h2>Get your files</h2>
         <p style="font-size:.95rem; color:var(--muted); margin-bottom:1.2rem;">
-          The same link is in your email — this is just faster.
+          This link works right away. We send a copy to your email too, so you can come
+          back to it later.
         </p>
         <button class="btn btn-primary btn-block" id="downloadBtn">Send my download link</button>
         <div class="msg" id="downloadMsg"></div>
@@ -428,6 +429,23 @@ footer { border-top:1px solid var(--line); padding:2rem 0 3rem; font-size:.88rem
     // Wire the download button to the same self-serve resend endpoint the
     // emails use, so there is one code path for "get me my file".
     var button = document.getElementById('downloadBtn');
+
+    // Hand the file over here rather than making the inbox the only way to get
+    // it. An email that is delayed, filtered or simply undeliverable used to mean
+    // a paying customer received nothing at all.
+    if (data.downloadUrl) {
+      var direct = document.createElement('a');
+      direct.className = 'btn btn-primary btn-block';
+      direct.href = data.downloadUrl;
+      direct.setAttribute('download', '');
+      direct.textContent = 'Download your course';
+      button.parentNode.insertBefore(direct, button);
+
+      // Demote the resend to a secondary action; it is now a convenience for
+      // getting the link onto another device, not the delivery mechanism.
+      button.className = 'btn btn-block';
+      button.textContent = 'Email me the link as well';
+    }
     button.addEventListener('click', function () {
       if (!data.email) {
         setMsg('downloadMsg', 'We need your email to send the link. Please check the email we already sent you.', 'err');
