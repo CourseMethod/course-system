@@ -187,22 +187,40 @@ const config = {
 // Cross-field validation — the checks that catch real, expensive mistakes
 // ---------------------------------------------------------------------------
 
+// Stripe issues two kinds of server-side key: standard secret keys (sk_) and
+// restricted keys (rk_), which carry an explicit, narrower set of permissions.
+// Both come in live and test flavours. A restricted key is the better choice in
+// production — if it leaks, the blast radius is whatever you granted it rather
+// than your entire account — so mode is decided by the live_/test_ segment and
+// not by the sk_ prefix. Getting this wrong rejects a perfectly good rk_live_
+// key as though it were a test key, which is a confusing way to lose a launch.
+const secretIsLive = /^(sk|rk)_live_/.test(config.stripe.secretKey);
+const secretIsTest = /^(sk|rk)_test_/.test(config.stripe.secretKey);
+const publishableIsLive = config.stripe.publishableKey.startsWith('pk_live_');
+
 // 1. Never ship test keys to production. This one has cost people real launches:
 //    the page works, checkout "succeeds", and no money ever arrives.
-if (isProduction && config.stripe.secretKey.startsWith('sk_test_')) {
+if (isProduction && secretIsTest) {
   errors.push(
     'STRIPE_SECRET_KEY is a TEST key but NODE_ENV=production. ' +
     'Real customers would see a working checkout that never charges them. ' +
-    'Swap in your sk_live_ key, or set NODE_ENV=development.'
+    'Swap in your sk_live_ (or rk_live_) key, or set NODE_ENV=development.'
   );
 }
 if (isProduction && config.stripe.publishableKey.startsWith('pk_test_')) {
   errors.push('STRIPE_PUBLISHABLE_KEY is a TEST key but NODE_ENV=production. Swap in your pk_live_ key.');
 }
 
+// A key that is neither live nor test is a typo, a truncated paste, or a
+// publishable key in the wrong slot. Say so now, not at the first checkout.
+if (config.stripe.secretKey && !secretIsLive && !secretIsTest) {
+  errors.push(
+    'STRIPE_SECRET_KEY does not look like a Stripe secret key. ' +
+    'It should begin with sk_live_, sk_test_, rk_live_ or rk_test_.'
+  );
+}
+
 // 2. Mixing live and test keys produces baffling "No such customer" errors.
-const secretIsLive = config.stripe.secretKey.startsWith('sk_live_');
-const publishableIsLive = config.stripe.publishableKey.startsWith('pk_live_');
 if (config.stripe.secretKey && config.stripe.publishableKey && secretIsLive !== publishableIsLive) {
   errors.push(
     'STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY are from different modes ' +
