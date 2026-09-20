@@ -229,6 +229,11 @@ if (config.stripe.secretKey && config.stripe.publishableKey && secretIsLive !== 
   );
 }
 
+// Exposed so nothing else has to re-derive the mode from a key prefix.
+// Deriving it in two places is exactly what let an rk_live_ key read as live
+// here and as "test" in the startup banner.
+config.stripe.isLiveMode = secretIsLive;
+
 // 3. Production must serve over HTTPS or Stripe redirects and cookies break.
 if (isProduction && !config.publicUrl.startsWith('https://')) {
   errors.push(`PUBLIC_URL must use https:// in production (got "${config.publicUrl}").`);
