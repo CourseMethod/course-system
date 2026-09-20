@@ -72,7 +72,7 @@ function render({ title, preheader, content, trackingPixelUrl = null, unsubscrib
           <tr>
             <td style="padding:28px 32px 0 32px;">
               <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; font-weight:700; color:${COLOURS.ink}; letter-spacing:-0.01em;">
-                Course Printer
+                Course Method
               </div>
             </td>
           </tr>
@@ -90,7 +90,7 @@ function render({ title, preheader, content, trackingPixelUrl = null, unsubscrib
                   Questions? Just reply to this email — it reaches a real person.
                 </p>
                 <p style="margin:0 0 8px 0;">
-                  &copy; ${new Date().getFullYear()} Course Printer
+                  &copy; ${new Date().getFullYear()} Course Method
                 </p>
                 ${unsubscribeUrl ? `<p style="margin:0;"><a href="${escapeHtml(unsubscribeUrl)}" style="color:${COLOURS.muted}; text-decoration:underline;">Unsubscribe from tips and updates</a> &middot; You will still receive anything relating to your purchase.</p>` : ''}
               </div>
@@ -176,7 +176,7 @@ function bullets(items) {
   }</ul>`;
 }
 
-function signoff(name = 'The Course Printer team') {
+function signoff(name = 'The Course Method team') {
   return `<p style="margin:24px 0 0 0;">— ${escapeHtml(name)}</p>`;
 }
 
