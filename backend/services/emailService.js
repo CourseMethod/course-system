@@ -20,6 +20,49 @@ const { TEMPLATES } = require('../templates');
 let transporter;
 
 /**
+ * Minimal HTTPS client for Brevo. Node's global fetch rather than a dependency,
+ * because this is two calls against one endpoint.
+ *
+ * The timeout is the point: a provider that accepts the connection and then
+ * stalls would otherwise hold a Stripe webhook open until Stripe gives up and
+ * retries the whole payment event.
+ */
+async function brevoRequest(path, { method, body }) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+
+  try {
+    const response = await fetch(`https://api.brevo.com${path}`, {
+      method,
+      headers: {
+        'api-key': config.email.brevo.apiKey,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    const text = await response.text();
+    let json = null;
+    try { json = text ? JSON.parse(text) : null; } catch { /* keep the raw text */ }
+
+    // Truncated: these end up in logs and in the admin dashboard's failure
+    // column, and an HTML error page from a proxy would swamp both.
+    return { ok: response.ok, status: response.status, body: text.slice(0, 500), json };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** `Course Printer <sales@example.com>` becomes Brevo's { name, email } shape. */
+function parseAddress(value) {
+  const match = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(value || '');
+  if (match) return { name: match[1].replace(/^"|"$/g, ''), email: match[2] };
+  return { email: String(value || '').trim() };
+}
+
+/**
  * Build the nodemailer transport.
  *
  * The `console` transport is a real transport, not a no-op: it prints the
@@ -54,6 +97,46 @@ function getTransporter() {
         pool: true,
         maxConnections: 1, // Gmail is strict about concurrency
       });
+      break;
+
+    case 'brevo':
+      // Sends over HTTPS on 443 rather than SMTP. Managed hosts commonly block
+      // outbound 25/465/587, and a blocked port makes an SMTP transport hang
+      // rather than fail, which is far worse than an error. This is a small
+      // nodemailer-shaped adapter, not a second sending path: retries, email
+      // records and templates upstream of it are untouched.
+      transporter = {
+        async verify() {
+          const response = await brevoRequest('/v3/account', { method: 'GET' });
+          if (!response.ok) {
+            throw new Error(`Brevo rejected the API key (HTTP ${response.status}): ${response.body}`);
+          }
+          return true;
+        },
+
+        async sendMail(message) {
+          const response = await brevoRequest('/v3/smtp/email', {
+            method: 'POST',
+            body: {
+              sender: parseAddress(message.from),
+              to: [{ email: message.to }],
+              subject: message.subject,
+              htmlContent: message.html,
+              textContent: message.text,
+              headers: message.headers,
+            },
+          });
+
+          if (!response.ok) {
+            // Brevo explains refusals in the body — an unverified sender and a
+            // spent quota are the two common ones, and they need different
+            // fixes. Without it every failure would read the same.
+            throw new Error(`Brevo refused the message (HTTP ${response.status}): ${response.body}`);
+          }
+
+          return { messageId: response.json?.messageId };
+        },
+      };
       break;
 
     case 'console':
