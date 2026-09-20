@@ -9,6 +9,7 @@ const { asyncHandler } = require('../utils/errors');
 const validate = require('../utils/validate');
 const rateLimiters = require('../middleware/rateLimit');
 const stripeService = require('../services/stripeService');
+const deliveryService = require('../services/deliveryService');
 const pricing = require('../services/pricingService');
 const events = require('../models/events');
 const { config } = require('../config');
@@ -106,6 +107,27 @@ router.post('/verify-session', asyncHandler(async (req, res) => {
 
   const paid = session.payment_status === 'paid';
 
+  // Hand the file over on the page rather than only by email. Possession of the
+  // Stripe session id is the same proof of purchase this endpoint already accepts
+  // before disclosing the receipt, and that id is high-entropy and only ever
+  // reaches the buyer's own redirect URL — so this discloses the download to
+  // exactly the party that just paid for it.
+  //
+  // A refunded customer still gets their receipt but no link: issueDownloadLink
+  // refuses any status other than paid, and that refusal must not turn the whole
+  // receipt into an error.
+  let downloadUrl = null;
+  let downloadExpiresAt = null;
+  if (paid && customer) {
+    try {
+      const link = deliveryService.issueDownloadLink(customer.id);
+      downloadUrl = link.url;
+      downloadExpiresAt = link.expiresAt;
+    } catch (error) {
+      req.log.warn('Could not issue a download link for a verified session', { error: error.message });
+    }
+  }
+
   res.json({
     paid,
     // `fulfilled` false with `paid` true means the webhook is still in flight —
@@ -117,6 +139,10 @@ router.post('/verify-session', asyncHandler(async (req, res) => {
     tier: session.metadata?.tier || null,
     tierName: pricing.TIERS[session.metadata?.tier]?.name || null,
     amountFormatted: session.amount_total ? pricing.formatPrice(session.amount_total) : null,
+    // Null whenever fulfilment has not landed yet or the purchase was refunded;
+    // the page falls back to the email resend path in both cases.
+    downloadUrl,
+    downloadExpiresAt,
   });
 }));
 
