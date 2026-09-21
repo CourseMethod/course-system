@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find your course — Course Method</title>
+<meta name="description" content="A free AI prompt that interviews you for ten minutes and tells you what course you could actually teach.">
+<style>
+  :root { --bg:#0f0f14; --panel:#16161f; --ink:#eceaf3; --muted:#9c9aab; --accent:#7c74ff; --line:#262633; --serif: ui-serif, Georgia, "Times New Roman", serif; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width:720px; margin:0 auto; padding:2.5rem 1.25rem 4rem; }
+  header { border-bottom:1px solid var(--line); margin-bottom:2.5rem; padding-bottom:1.25rem; }
+  .logo { color:var(--ink); text-decoration:none; font-weight:700; letter-spacing:-0.01em; }
+  .eyebrow { color:var(--accent); font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; margin:0 0 .6rem; font-weight:600; }
+  h1 { font-family:var(--serif); font-size:2.1rem; line-height:1.15; margin:0 0 .8rem; letter-spacing:-0.02em; font-weight:600; }
+  h2 { font-size:1.1rem; margin:2.4rem 0 .6rem; letter-spacing:-0.01em; }
+  .lede { color:#cfccdd; font-size:1.06rem; }
+  p, li { color:#d7d4e2; }  a { color:var(--accent); }  ul { padding-left:1.2rem; }  li { margin-bottom:.45rem; }
+  .promptbox { background:var(--panel); border:1px solid var(--line); border-radius:10px; margin:1.2rem 0 1rem; overflow:hidden; }
+  .promptbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.6rem .75rem .6rem 1rem; border-bottom:1px solid var(--line); background:#12121a; }
+  .promptbar span { color:var(--muted); font-size:.82rem; }
+  .copybtn { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:.45rem .9rem; font-size:.85rem; font-weight:600; cursor:pointer; font-family:inherit; }
+  .copybtn.done { background:#2f9e63; }
+  pre { margin:0; padding:1rem 1.1rem; font:13px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color:#d3d0e0; white-space:pre-wrap; word-wrap:break-word; max-height:380px; overflow-y:auto; }
+  .note { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:8px; padding:1rem 1.15rem; margin:1.6rem 0; font-size:.95rem; }
+  .cta { border:1px solid var(--line); border-radius:12px; padding:1.6rem; margin:3rem 0 0; background:var(--panel); }
+  .cta h2 { margin-top:0; }
+  .btn { display:inline-block; background:var(--accent); color:#fff; text-decoration:none; padding:.8rem 1.4rem; border-radius:8px; font-weight:600; margin-top:.6rem; }
+  footer { border-top:1px solid var(--line); margin-top:3.5rem; padding-top:1.25rem; color:var(--muted); font-size:.9rem; }
+  footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header><a href="/" class="logo">Course&nbsp;Method</a></header>
+
+  <p class="eyebrow">Free · No email required</p>
+  <h1>Find out what course you could actually teach</h1>
+  <p class="lede">
+    Paste the prompt below into any AI chat. It will interview you for about ten minutes —
+    one question at a time — then tell you what you could teach, who would pay for it, and
+    where your evidence is thin.
+  </p>
+
+  <p>
+    It is deliberately not a cheerleader. If the honest answer is "not yet, here is what you
+    would need first", it is built to say that.
+  </p>
+
+  <div class="promptbox">
+    <div class="promptbar">
+      <span>The prompt — paste into Claude, ChatGPT or any AI chat</span>
+      <button class="copybtn" id="copy" type="button">Copy</button>
+    </div>
+<pre id="prompt">You are going to interview me to work out what course I could honestly sell.
+
+Rules for how you run this:
+
+1. Ask me ONE question at a time. Wait for my answer before the next one. Never send
+   a list of questions.
+2. Ask roughly 12 to 15 questions in total. Follow what I actually say rather than
+   working through a fixed script.
+3. Be warm but sceptical. If an answer is vague, ask for the specific instance — the
+   actual project, the actual person, the actual outcome.
+4. Do not flatter me and do not tell me everything is a great idea. Your value here is
+   in noticing what is thin.
+5. Do not tell me what I could earn. Not a figure, not a range. That is not something
+   you can know, and claims like it are regulated in most countries.
+
+Cover this ground, in roughly this order, adapting as you go:
+
+- What people already come to me for. Not what I am interested in — what I actually get
+  asked. Ask for the last three times someone asked me something.
+- What I have actually done, finished, or fixed. Push for concrete cases with a before
+  and after.
+- Where I am roughly two years ahead of someone else, rather than world-class. That gap
+  is usually the teachable one.
+- Who specifically struggles with this. Push me past "everyone" and "beginners" until I
+  describe a recognisable person and their situation.
+- What that person has already tried that did not work, and why.
+- The words they use. Ask me to quote them, not paraphrase.
+- What proof I have: work I can show, results I can evidence, permission to share it.
+- What I would refuse to teach, or would feel uncomfortable claiming.
+- How much time I realistically have over the next eight weeks.
+
+Then stop interviewing and give me a written verdict with these sections:
+
+THREE CANDIDATE COURSES
+For each: a working title, the specific person it is for in a sentence, the single
+transformation it delivers, roughly what it would cover, and the strongest honest reason
+someone would pay for it.
+
+THE CASE AGAINST EACH
+For each candidate, the most serious objection. Where my evidence is weakest, who already
+teaches this better, and what would make a buyer bounce.
+
+WHAT I WOULD PICK, AND WHY
+One recommendation, with your reasoning stated plainly, including what you are uncertain
+about.
+
+WHAT IS MISSING
+The specific things I would need before I could sell this honestly — evidence I do not
+yet have, experience I have not yet got, or claims I could not currently support. Be
+concrete.
+
+THEIR WORDS
+The exact phrases I used about my audience’s problem, quoted back to me, so I can use
+their language rather than mine.
+
+If, after the interview, you think I do not yet have a sellable course, say so directly
+and tell me what would change that. That answer is more useful to me than an encouraging
+one.
+
+Start with your first question now. Just the question — no preamble.</pre>
+  </div>
+
+  <h2>How to use it</h2>
+  <ul>
+    <li><strong>Copy the prompt</strong> and paste it into any AI chat. The free tier of Claude or ChatGPT is enough.</li>
+    <li><strong>Answer properly.</strong> One-word answers produce a useless verdict. What comes out is set entirely by how specific you are.</li>
+    <li><strong>Do not skip the uncomfortable questions</strong> — the ones about evidence and what you would refuse to claim. Those are the ones that stop you building something you cannot defend.</li>
+    <li><strong>Keep the transcript.</strong> The "Their words" section is research you will use again when you write the sales page.</li>
+  </ul>
+
+  <div class="note">
+    <strong>If it tells you that you are not ready, believe it.</strong> The most common way
+    this goes wrong is teaching something you have read about rather than done. Finding that
+    out from a ten-minute interview is considerably cheaper than finding it out from refund
+    requests.
+  </div>
+
+  <div class="cta">
+    <h2>And if it finds something worth teaching?</h2>
+    <p>
+      The interview tells you what to build. <strong>Course Method</strong> is the 41 lessons
+      that tell you how to build it — structuring it, writing it without stalling, pricing it,
+      and getting it in front of people. Plain Markdown files, yours to keep.
+    </p>
+    <a class="btn" href="/#pricing">See what’s in it</a>
+  </div>
+
+  <footer>
+    <a href="/">Home</a> · <a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var btn = document.getElementById("copy");
+  var pre = document.getElementById("prompt");
+  function done() {
+    btn.textContent = "Copied"; btn.classList.add("done");
+    setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("done"); }, 2000);
+  }
+  function fallback(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { btn.textContent = "Select and copy"; }
+    document.body.removeChild(ta);
+  }
+  btn.addEventListener("click", function () {
+    var text = pre.innerText;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(text); });
+    } else { fallback(text); }
+  });
+})();
+</script>
+</body>
+</html>
