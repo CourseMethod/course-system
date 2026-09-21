@@ -56,7 +56,7 @@ router.get('/config', (req, res) => {
           checkoutUrl: config.checkout.gumroadMethodUrl || null,
           available: true,
           features: [
-            'Full Course Method vault — 40 lessons, 5 modules',
+            'Full Course Method vault — 41 lessons, 5 modules',
             'Step-by-step faceless course build guide',
             'Positioning framework, niche finder, audience research',
             'Fill-in templates for everything',
