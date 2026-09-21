@@ -33,6 +33,12 @@ router.get('/config', (req, res) => {
   res.json({
     stripePublishableKey: config.stripe.publishableKey,
     pricing: {
+      // Gumroad is the merchant of record and adds VAT on top of the listed
+      // price at its own checkout, so the page has to say so. Showing a
+      // consumer a price that is not what they will be charged is both a
+      // conversion problem at the last step and a breach of the EU price
+      // indication rules.
+      taxAddedAtCheckout: Boolean(config.checkout.gumroadMethodUrl || config.checkout.gumroadEngineUrl),
       launch: launchActive
         ? {
             active: true,
@@ -47,6 +53,7 @@ router.get('/config', (req, res) => {
           price: methodPrice,
           priceFormatted: formatPrice(methodPrice),
           compareAtFormatted: launchActive ? formatPrice(methodAfter) : null,
+          checkoutUrl: config.checkout.gumroadMethodUrl || null,
           available: true,
           features: [
             'Full Course Method vault — 40 lessons, 5 modules',
@@ -65,6 +72,7 @@ router.get('/config', (req, res) => {
           price: enginePrice,
           priceFormatted: formatPrice(enginePrice),
           compareAtFormatted: launchActive ? formatPrice(engineAfter) : null,
+          checkoutUrl: config.checkout.gumroadEngineUrl || null,
           available: true,
           features: [
             'Everything in The Method, plus:',
