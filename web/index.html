@@ -1344,10 +1344,14 @@ footer a:hover { color: var(--ink); text-decoration: underline; }
       }
       plan.appendChild(priceRow);
 
+      // When Gumroad is the seller, VAT is added on top of this price at its
+      // checkout, so the buyer pays more than the figure above. Saying so here
+      // is both a legal requirement and cheaper than losing them at the till.
+      var taxSuffix = pricing.taxAddedAtCheckout ? ' · + VAT, added at checkout' : '';
       plan.appendChild(el('p', 'price-note',
-        tier.compareAtFormatted
+        (tier.compareAtFormatted
           ? 'One payment · Launch price, ' + tier.compareAtFormatted + ' after'
-          : 'One payment · Instant download'));
+          : 'One payment · Instant download') + taxSuffix));
 
       // Real cohort availability, when a genuine cap is configured.
       if (tier.cohort && tier.cohort.limit) {
@@ -1366,7 +1370,18 @@ footer a:hover { color: var(--ink); text-decoration: underline; }
       button.type = 'button';
       if (tier.available) {
         button.textContent = 'Get ' + tier.name + ' — ' + tier.priceFormatted;
-        button.addEventListener('click', function () { startCheckout(tier.id, button); });
+        if (tier.checkoutUrl) {
+          // Gumroad is the merchant of record: it takes the payment, charges
+          // VAT and delivers the file. Attribution still gets recorded here
+          // first, because once the visitor leaves for Gumroad this page never
+          // hears from them again.
+          button.addEventListener('click', function () {
+            track('checkout_started', { tier: tier.id, via: 'gumroad' });
+            window.location.href = tier.checkoutUrl;
+          });
+        } else {
+          button.addEventListener('click', function () { startCheckout(tier.id, button); });
+        }
       } else {
         button.textContent = 'Currently full';
         button.disabled = true;
