@@ -1,0 +1,42 @@
+# Publishes the static sales page to GitHub Pages.
+#
+# The site is the contents of web/ and nothing else: Gumroad takes the payment,
+# charges VAT and delivers the file, so there is no server to run any more. The
+# backend/ folder stays in the repo because it is what Engine customers buy.
+
+name: Deploy site to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - name: Upload the web folder
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
