@@ -1158,7 +1158,6 @@ footer a:hover { color: var(--ink); text-decoration: underline; }
   </div>
 </div>
 
-<script src="https://js.stripe.com/v3/"></script>
 <script>
 (function () {
   'use strict';
@@ -1187,7 +1186,51 @@ footer a:hover { color: var(--ink); text-decoration: underline; }
     resultsCaveat: 'These are my own results from [PERIOD], not a customer average, and not a projection of what you will earn. Your outcome depends on your topic, your audience and how long you keep going.'
   };
 
-  var API = '/api';
+  // This page is static. Gumroad is the seller of record: it takes the payment,
+  // charges VAT and delivers the file, so there is no backend here to ask.
+  // Prices live in one place — this object — and must match the Gumroad products.
+  var STATIC_CONFIG = {
+    pricing: {
+      taxAddedAtCheckout: true,
+      launch: { active: false },
+      tiers: [
+        {
+          id: 'method', name: 'The Method',
+          tagline: "The complete playbook. Build a course faceless. Sell it with templates. Everything you need, nothing you don't.",
+          price: 4700, priceFormatted: '\u20ac47', compareAtFormatted: null,
+          checkoutUrl: 'https://coursemethod.gumroad.com/l/coursemethod',
+          available: true,
+          features: [
+            'Full Course Method vault \u2014 41 lessons, 5 modules',
+            'Step-by-step faceless course build guide',
+            'Positioning framework, niche finder, audience research',
+            'Fill-in templates for everything',
+            'AI prompts for content, scripts, social posts',
+            'The 30-day distribution playbook',
+            'Lifetime updates'
+          ]
+        },
+        {
+          id: 'engine', name: 'The Engine',
+          tagline: 'Everything in The Method plus plug-and-play: the entire selling system, wired up and ready to launch.',
+          price: 9700, priceFormatted: '\u20ac97', compareAtFormatted: null,
+          checkoutUrl: 'https://coursemethod.gumroad.com/l/coursemethodengine',
+          available: true,
+          features: [
+            'Everything in The Method, plus:',
+            'Sales page + checkout \u2014 this exact system',
+            'Automated course delivery after purchase',
+            'Customer database + analytics dashboard',
+            'Email sequences + support tracking',
+            'Full source code \u2014 read it, modify it, own it',
+            'Deployment guides for every platform',
+            'Email support through launch'
+          ]
+        }
+      ]
+    }
+  };
+  var SUPPORT_EMAIL = 'coursemethodsales@gmail.com';
 
   /* ── Small helpers ─────────────────────────────────────────────────── */
   function $(sel) { return document.querySelector(sel); }
@@ -1237,18 +1280,9 @@ footer a:hover { color: var(--ink); text-decoration: underline; }
   })();
 
   /* ── Analytics beacon ──────────────────────────────────────────────── */
-  function track(type, payload) {
-    try {
-      var body = JSON.stringify({ type: type, sessionKey: sessionKey, payload: payload || null });
-      // sendBeacon survives the page being closed mid-request, which is
-      // exactly when a checkout-abandonment event needs to fire.
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(API + '/track', new Blob([body], { type: 'application/json' }));
-      } else {
-        fetch(API + '/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true });
-      }
-    } catch (e) { /* analytics must never break the page */ }
-  }
+  // No backend to receive these. A no-op keeps every call site working and
+  // leaves the hooks in place if analytics is added back later.
+  function track() {}
 
   track('page_view', { path: location.pathname });
 
@@ -1395,129 +1429,47 @@ footer a:hover { color: var(--ink); text-decoration: underline; }
   }
 
   function loadConfig() {
-    return fetch(API + '/config')
-      .then(function (response) {
-        if (!response.ok) throw new Error('config request failed');
-        return response.json();
-      })
-      .then(function (data) {
-        config = data;
-        if (window.Stripe && data.stripePublishableKey) {
-          stripe = Stripe(data.stripePublishableKey);
-        }
-        renderPricing(data.pricing);
-        if (data.pricing.launch && data.pricing.launch.active) {
-          startCountdown(data.pricing.launch.endsAt);
-        }
-      })
-      .catch(function (error) {
-        console.error('Could not load pricing', error);
-        var grid = document.getElementById('priceGrid');
-        grid.innerHTML =
-          '<div class="plan"><h3>Pricing unavailable</h3>' +
-          '<p style="color:var(--muted);font-size:.95rem">We could not load pricing just now. ' +
-          'Refresh the page, or email us and we will send you a direct payment link.</p>' +
-          '<button class="btn btn-ghost btn-block" type="button" data-modal="support">Email us</button></div>';
-        bindModalTriggers();
-      });
+    config = STATIC_CONFIG;
+    renderPricing(config.pricing);
+    if (config.pricing.launch && config.pricing.launch.active) {
+      startCountdown(config.pricing.launch.endsAt);
+    }
+    return Promise.resolve();
   }
 
   /* ── Checkout ──────────────────────────────────────────────────────── */
   var checkoutInFlight = false;
 
+  // Kept deliberately simple: every tier has a Gumroad checkoutUrl, so this only
+  // runs if one is ever missing. It fails loudly rather than silently doing nothing.
   function startCheckout(tierId, button) {
-    if (checkoutInFlight) return;
-    checkoutInFlight = true;
-
-    var originalLabel = button.textContent;
-    button.disabled = true;
-    button.textContent = 'Opening secure checkout…';
-
-    fetch(API + '/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tier: tierId, sessionKey: sessionKey, attribution: attribution })
-    })
-      .then(function (response) {
-        return response.json().then(function (body) { return { ok: response.ok, body: body }; });
-      })
-      .then(function (result) {
-        if (!result.ok) {
-          throw new Error((result.body && result.body.error && result.body.error.message) ||
-            'Checkout could not be started.');
-        }
-        // Full-page redirect to Stripe's hosted checkout. Card details are
-        // entered on Stripe's domain and never touch this server.
-        window.location.href = result.body.url;
-      })
-      .catch(function (error) {
-        checkoutInFlight = false;
-        button.disabled = false;
-        button.textContent = originalLabel;
-        track('checkout_abandoned', { tier: tierId, reason: 'error' });
-
-        openModal('support', error.message +
-          ' Send us a message and we will email you a direct payment link.');
-      });
+    openModal('support', 'Checkout is temporarily unavailable. Send me a message and ' +
+      'I will reply with a direct payment link.');
   }
 
   /* ── Proof section ─────────────────────────────────────────────────── */
   function renderProof() {
     var container = document.getElementById('proofContent');
 
-    fetch(API + '/testimonials')
-      .then(function (response) { return response.json(); })
-      .then(function (data) {
-        var list = (data && data.testimonials) || [];
+    /* No testimonials yet. Rather than leaving a conspicuous gap or inventing
+       quotes, say so plainly and point at the proof that does exist: the product
+       is inspectable, and the refund carries the risk. */
+    document.getElementById('proofHeading').textContent = 'I don\u2019t have testimonials to show you yet.';
 
-        if (list.length === 0) {
-          /* ── The honest empty state ───────────────────────────────────
-             No testimonials yet. Rather than leaving a conspicuous gap or
-             inventing quotes, say so plainly and point at the proof that
-             does exist: the product itself is inspectable, and the refund
-             carries the risk. Candour here reads as confidence, and it is
-             the only option that is both effective and legal. */
-          document.getElementById('proofHeading').textContent = 'I don’t have testimonials to show you yet.';
-
-          var box = el('div', 'no-proof');
-          box.innerHTML =
-            '<p>This is new, so there is no wall of five-star quotes here. I could write some. ' +
-            'Plenty of pages do. I would rather tell you what I actually have instead.</p>' +
-            '<p><strong>You can inspect the product before buying.</strong> The complete lesson list ' +
-            'is above — all 40, not a teaser. The Engine tier’s source code is the system ' +
-            'running this page, including the checkout you are about to use.</p>' +
-            '<p><strong>The risk sits with me, not you.</strong> Fourteen days, unconditional, one ' +
-            'email, no retention script. If it is not what you expected you are out nothing but ' +
-            'the time it took to find out.</p>' +
-            '<p style="margin-bottom:0"><strong>And when real results come in, they go here</strong> ' +
-            '— with permission, in the customer’s own words, and with numbers I have ' +
-            'actually seen evidence for. Not before.</p>';
-          container.appendChild(box);
-          return;
-        }
-
-        var grid = el('div', 'proof-grid');
-        list.forEach(function (item) {
-          var card = el('div', 'quote');
-          if (item.headline) card.appendChild(el('div', 'quote-headline', item.headline));
-          card.appendChild(el('div', 'quote-text', '“' + item.quote + '”'));
-
-          var who = el('div', 'quote-who');
-          who.appendChild(el('span', null, '— ' + item.name +
-            (item.result_timeframe ? ', ' + item.result_timeframe : '')));
-          // The "verified" tag appears only where the operator has recorded
-          // that they saw evidence for the claim. It is a real distinction,
-          // not a decorative badge.
-          if (item.verified) who.appendChild(el('span', 'verified-tag', 'Result verified'));
-          card.appendChild(who);
-
-          grid.appendChild(card);
-        });
-        container.appendChild(grid);
-      })
-      .catch(function () {
-        container.innerHTML = '';
-      });
+    var box = el('div', 'no-proof');
+    box.innerHTML =
+      '<p>This is new, so there is no wall of five-star quotes here. I could write some. ' +
+      'Plenty of pages do. I would rather tell you what I actually have instead.</p>' +
+      '<p><strong>You can inspect the product before buying.</strong> The complete lesson list ' +
+      'is above \u2014 all 41, not a teaser. The Engine tier\u2019s source code is the system ' +
+      'running this page.</p>' +
+      '<p><strong>The risk sits with me, not you.</strong> Fourteen days, one email, no ' +
+      'retention script. If it is not what you expected you are out nothing but the time it ' +
+      'took to find out.</p>' +
+      '<p style="margin-bottom:0"><strong>And when real results come in, they go here</strong> ' +
+      '\u2014 with permission, in the customer\u2019s own words, and with numbers I have ' +
+      'actually seen evidence for. Not before.</p>';
+    container.appendChild(box);
   }
 
   /* ── Modals ────────────────────────────────────────────────────────── */
@@ -1617,37 +1569,24 @@ footer a:hover { color: var(--ink); text-decoration: underline; }
     submitButton.textContent = 'Sending…';
     modalMsg.className = 'modal-msg';
 
-    fetch(API + activeModal.endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-      .then(function (response) {
-        return response.json().then(function (body) { return { ok: response.ok, body: body }; });
-      })
-      .then(function (result) {
-        submitButton.disabled = false;
-        submitButton.textContent = activeModal.submitLabel;
+    // No backend here. Gumroad handles receipts, re-delivery and refunds as seller
+    // of record, but the person asking should not have to know that — so compose an
+    // email rather than leave them at a dead end.
+    var lines = activeModal.fields.map(function (field) {
+      return field.label + ': ' + (payload[field.name] || '');
+    });
+    var mailBody = lines.join('\n') + '\n\n--\nSent from the Course Method site.';
+    var href = 'mailto:' + SUPPORT_EMAIL +
+      '?subject=' + encodeURIComponent(activeModal.title) +
+      '&body=' + encodeURIComponent(mailBody);
 
-        if (result.ok) {
-          modalMsg.className = 'modal-msg on ok';
-          modalMsg.textContent = result.body.message ||
-            (result.body.reference ? 'Received. Your reference is ' + result.body.reference + '.' : 'Done.');
-          modalForm.querySelectorAll('input, textarea').forEach(function (input) { input.value = ''; });
-        } else {
-          modalMsg.className = 'modal-msg on err';
-          var issues = result.body.error && result.body.error.issues;
-          modalMsg.textContent = issues && issues.length
-            ? issues.map(function (issue) { return issue.message; }).join(' ')
-            : (result.body.error && result.body.error.message) || 'Something went wrong. Please try again.';
-        }
-      })
-      .catch(function () {
-        submitButton.disabled = false;
-        submitButton.textContent = activeModal.submitLabel;
-        modalMsg.className = 'modal-msg on err';
-        modalMsg.textContent = 'Could not reach the server. Check your connection and try again.';
-      });
+    submitButton.disabled = false;
+    submitButton.textContent = activeModal.submitLabel;
+    modalMsg.className = 'modal-msg on ok';
+    modalMsg.textContent = 'Opening your email app. If nothing happens, write to ' +
+      SUPPORT_EMAIL + ' and I will pick it up there.';
+
+    window.location.href = href;
   });
 
   document.getElementById('modalClose').addEventListener('click', closeModal);
